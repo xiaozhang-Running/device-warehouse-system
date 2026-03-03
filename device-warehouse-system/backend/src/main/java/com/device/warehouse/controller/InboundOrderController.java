@@ -1,0 +1,161 @@
+package com.device.warehouse.controller;
+
+import com.device.warehouse.entity.InboundOrder;
+import com.device.warehouse.service.InboundOrderService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/inbound")
+@CrossOrigin(origins = "*")
+public class InboundOrderController {
+
+    @Autowired
+    private InboundOrderService inboundOrderService;
+
+    @GetMapping
+    public ResponseEntity<List<InboundOrder>> getAllOrders() {
+        List<InboundOrder> orders = inboundOrderService.getAllOrders();
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getOrderById(@PathVariable Long id) {
+        InboundOrder order = inboundOrderService.getOrderById(id);
+        if (order != null) {
+            return ResponseEntity.ok(order);
+        } else {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "入库单不存在");
+            return ResponseEntity.status(404).body(response);
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> request) {
+        try {
+            InboundOrder order = new InboundOrder();
+            order.setOrderCode((String) request.get("orderCode"));
+            order.setRemark((String) request.get("remark"));
+            order.setInboundType((String) request.get("inboundType"));
+            order.setDeviceType((String) request.get("deviceType"));
+            order.setReceiver((String) request.get("receiver"));
+            order.setReceiverPhone((String) request.get("receiverPhone"));
+            
+            // 处理归还入库的设备ID列表
+            @SuppressWarnings("unchecked")
+            List<Object> deviceIdsRaw = (List<Object>) request.get("deviceIds");
+            List<Long> deviceIds = null;
+            if (deviceIdsRaw != null && !deviceIdsRaw.isEmpty()) {
+                deviceIds = deviceIdsRaw.stream()
+                    .map(id -> {
+                        if (id instanceof Number) {
+                            return ((Number) id).longValue();
+                        }
+                        return Long.parseLong(id.toString());
+                    })
+                    .toList();
+            }
+            
+            // 处理新采购入库的物品明细
+            @SuppressWarnings("unchecked")
+            Map<String, Object> inventoryList = (Map<String, Object>) request.get("inventoryList");
+            List<Map<String, Object>> items = null;
+            if (inventoryList != null) {
+                items = (List<Map<String, Object>>) inventoryList.get("items");
+            }
+            
+            System.out.println("创建入库单: " + order.getOrderCode() + ", 类型: " + order.getInboundType() + 
+                ", 归还设备数量: " + (deviceIds != null ? deviceIds.size() : 0) + 
+                ", 新采购物品数量: " + (items != null ? items.size() : 0));
+            
+            InboundOrder createdOrder = inboundOrderService.createOrder(order, deviceIds, items);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "入库单创建成功");
+            response.put("data", createdOrder);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("创建入库单失败: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "创建失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<?> completeOrder(@PathVariable Long id) {
+        try {
+            System.out.println("完成入库单: " + id);
+            InboundOrder order = inboundOrderService.completeOrder(id);
+            if (order != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "入库单已完成，设备状态已更新为未使用");
+                response.put("data", order);
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "入库单不存在或状态不正确");
+                return ResponseEntity.status(400).body(response);
+            }
+        } catch (Exception e) {
+            System.out.println("完成入库单失败: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "操作失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long id) {
+        try {
+            InboundOrder order = inboundOrderService.cancelOrder(id);
+            if (order != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "入库单已取消");
+                response.put("data", order);
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "入库单不存在或状态不正确");
+                return ResponseEntity.status(400).body(response);
+            }
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "操作失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteOrder(@PathVariable Long id) {
+        try {
+            inboundOrderService.deleteOrder(id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "入库单已删除");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "删除失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+}
