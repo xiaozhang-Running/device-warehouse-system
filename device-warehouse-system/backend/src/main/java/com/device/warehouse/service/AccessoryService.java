@@ -4,7 +4,9 @@ import com.device.warehouse.entity.Accessory;
 import com.device.warehouse.repository.AccessoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @SuppressWarnings("null")
@@ -14,6 +16,42 @@ public class AccessoryService {
 
     public List<Accessory> getAllAccessories() {
         return accessoryRepository.findAll();
+    }
+
+    public List<Accessory> getAllAccessories(String accessoryName, String brand, String status, String usageStatus) {
+        List<Accessory> allAccessories = accessoryRepository.findAll();
+        
+        return allAccessories.stream()
+            .filter(accessory -> {
+                // 筛选名称（模糊匹配）
+                if (accessoryName != null && !accessoryName.isEmpty()) {
+                    if (accessory.getAccessoryName() == null || 
+                        !accessory.getAccessoryName().toLowerCase().contains(accessoryName.toLowerCase())) {
+                        return false;
+                    }
+                }
+                // 筛选品牌（模糊匹配）
+                if (brand != null && !brand.isEmpty()) {
+                    if (accessory.getBrand() == null || 
+                        !accessory.getBrand().toLowerCase().contains(brand.toLowerCase())) {
+                        return false;
+                    }
+                }
+                // 筛选设备状态（精确匹配）
+                if (status != null && !status.isEmpty()) {
+                    if (accessory.getStatus() == null || !accessory.getStatus().equals(status)) {
+                        return false;
+                    }
+                }
+                // 筛选使用状态（精确匹配）
+                if (usageStatus != null && !usageStatus.isEmpty()) {
+                    if (accessory.getUsageStatus() == null || !accessory.getUsageStatus().equals(usageStatus)) {
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .collect(Collectors.toList());
     }
 
     public Accessory getAccessoryById(Long id) {

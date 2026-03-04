@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Card, Table, Button, Modal, Form, Input, Select, DatePicker, message, Space, Tag, Popconfirm, Row, Col, Divider, InputNumber, Descriptions, List, Upload, Image } from 'antd'
-import { CheckOutlined, CloseOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, PrinterOutlined, SearchOutlined, DoubleRightOutlined, PlusCircleOutlined } from '@ant-design/icons'
+import { CheckOutlined, CloseOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, PrinterOutlined, SearchOutlined, DoubleRightOutlined, PlusCircleOutlined, EditOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 
@@ -26,9 +26,11 @@ function OutboundManagement() {
   const [devicePagination, setDevicePagination] = useState({ current: 1, pageSize: 10 })
   const [deviceDetailVisible, setDeviceDetailVisible] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState(null)
+  const [deviceSingleDetailVisible, setDeviceSingleDetailVisible] = useState(false) // 单个设备详情弹窗
   const [deviceSummaryList, setDeviceSummaryList] = useState([]) // 设备汇总列表
   const [selectedDeviceModel, setSelectedDeviceModel] = useState(null) // 当前选中的设备型号
   const [deviceVariants, setDeviceVariants] = useState([]) // 当前型号的所有设备
+  const [deviceVariantSearchText, setDeviceVariantSearchText] = useState('') // 设备变体搜索文本
   const processingFilesRef = useRef(new Set()) // 跟踪正在处理的文件
 
   useEffect(() => {
@@ -207,6 +209,54 @@ function OutboundManagement() {
     }
   }
 
+  // 编辑出库单
+  const handleEdit = async (record) => {
+    try {
+      // 获取完整的出库单信息
+      const response = await fetch(`/api/outbound/${record.id}`)
+      const data = await response.json()
+      
+      // 填充表单数据
+      form.setFieldsValue({
+        handledBy: data.handledBy || '',
+        deptApprover: data.deptApprover || '',
+        warehouseKeeper: data.warehouseKeeper || '',
+        orderDate: data.orderDate ? dayjs(data.orderDate) : null,
+        usageType: data.usageType || '',
+        transportMethod: data.transportMethod || '',
+        recipientName: data.recipientName || '',
+        contactPhone: data.contactPhone || '',
+        eventName: data.eventName || '',
+        usageLocation: data.usageLocation || '',
+        eventDate: data.eventDate || '',
+        returnDate: data.returnDate ? dayjs(data.returnDate) : null,
+        remark: data.remark || ''
+      })
+      
+      // 填充设备列表
+      const editItems = data.items.map(item => ({
+        key: item.id || Date.now() + Math.random(),
+        deviceId: item.deviceId || item.device?.id || item.consumable?.id || item.accessory?.id,
+        deviceName: item.deviceName || item.device?.deviceName || item.consumable?.consumableName || item.accessory?.accessoryName || '-',
+        deviceCode: item.deviceCode || item.device?.deviceCode || item.consumable?.consumableCode || item.accessory?.accessoryCode || '-',
+        brand: item.brand || item.device?.brand || item.consumable?.brand || item.accessory?.brand || '-',
+        itemType: item.itemType === 'consumable' ? '耗材' : item.itemType === 'material' ? '物料' : item.itemType === 'accessory' ? '通用设备' : item.itemType === 'device' ? '专用设备' : (item.itemType || item.device?.itemType || (item.consumable ? '耗材' : (item.accessory ? '通用设备' : '专用设备'))),
+        usageStatus: item.usageStatus || item.device?.usageStatus || '未使用',
+        quantity: item.quantity || 1,
+        unit: item.unit || '台',
+        remark: item.remark || '',
+        brandModel: item.brandModel || `${item.brand || ''} ${item.model || ''}`.trim()
+      }))
+      
+      setItems(editItems)
+      setCurrentOrder(data) // 保存当前编辑的订单信息
+      setModalVisible(true) // 打开编辑弹窗
+    } catch (error) {
+      console.error('获取出库单详情失败:', error)
+      message.error('获取出库单详情失败')
+    }
+  }
+
   // 打印出库单
   const handlePrint = (order) => {
     navigate(`/outbound/print/${order.id}`)
@@ -239,12 +289,44 @@ function OutboundManagement() {
     // 同时更新设备汇总列表
     generateDeviceSummary(filtered)
   }
+
+  // 查看设备汇总详情
+  const handleViewDeviceSummary = (summary) => {
+    setSelectedDeviceModel(summary)
+    setDeviceVariants(summary.variants)
+    setDeviceDetailVisible(true)
+  }
+
+  // 查看单个设备详情
+  const handleViewDeviceDetail = (device) => {
+    setSelectedDevice(device)
+    // 打开新的单个设备详情弹窗，不关闭设备变体列表弹窗
+    setDeviceSingleDetailVisible(true)
+  }
   
   // 处理设备型号选择，弹出该型号的所有设备
   const handleSelectDeviceModel = (model) => {
     setSelectedDeviceModel(model)
     setDeviceVariants(model.variants)
+    setDeviceVariantSearchText('') // 清空搜索文本
     setDeviceDetailVisible(true)
+  }
+
+  // 过滤设备变体列表（支持多个设备编号查询，以逗号分隔）
+  const getFilteredDeviceVariants = () => {
+    if (!deviceVariantSearchText || deviceVariantSearchText.trim() === '') {
+      return deviceVariants
+    }
+    
+    // 分割搜索文本，支持多个设备编号查询
+    const searchCodes = deviceVariantSearchText.split(',').map(code => code.trim()).filter(code => code !== '')
+    
+    return deviceVariants.filter(device => {
+      // 检查设备编号是否匹配任意一个搜索条件
+      return searchCodes.some(searchCode => 
+        device.deviceCode && device.deviceCode.toLowerCase().includes(searchCode.toLowerCase())
+      )
+    })
   }
 
   // 处理设备选择（从变体列表中选择）
@@ -272,7 +354,6 @@ function OutboundManagement() {
   // 关闭设备详情弹窗
   const handleDeviceDetailCancel = () => {
     setDeviceDetailVisible(false)
-    setSelectedDevice(null)
     setSelectedDeviceModel(null)
     setDeviceVariants([])
   }
@@ -419,7 +500,7 @@ function OutboundManagement() {
       setLoading(true)
       
       const orderData = {
-        orderCode: `OUT${Date.now()}`,
+        orderCode: currentOrder?.orderCode || `OUT${Date.now()}`,
         orderDate: values.orderDate.format('YYYY-MM-DD'),
         status: 'PENDING',
         remark: values.remark || '',
@@ -448,13 +529,25 @@ function OutboundManagement() {
         }))
       }
       
-      console.log('创建出库单请求数据:', orderData)
+      console.log(currentOrder ? '更新出库单请求数据:' : '创建出库单请求数据:', orderData)
       console.log('当前用户:', currentUser)
-      const response = await fetch('/api/outbound', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      })
+      
+      let response
+      if (currentOrder && currentOrder.id) {
+        // 更新出库单
+        response = await fetch(`/api/outbound/${currentOrder.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        })
+      } else {
+        // 创建出库单
+        response = await fetch('/api/outbound', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        })
+      }
       
       console.log('响应状态:', response.status)
       console.log('响应头:', response.headers)
@@ -464,20 +557,21 @@ function OutboundManagement() {
       console.log('响应数据:', data)
       
       if (data.success) {
-        message.success('出库单创建成功')
+        message.success(currentOrder ? '出库单更新成功' : '出库单创建成功')
         setModalVisible(false)
         form.resetFields()
         setItems([])
         setImages([])
+        setCurrentOrder(null) // 清空当前编辑的订单信息
         fetchOrders()
         fetchDevices()
       } else {
-        console.error('创建失败，错误信息:', data.message)
-        message.error(data.message || '创建失败')
+        console.error('操作失败，错误信息:', data.message)
+        message.error(data.message || '操作失败')
       }
     } catch (error) {
-      console.error('创建出库单失败:', error)
-      message.error('创建失败: ' + error.message)
+      console.error('操作失败:', error)
+      message.error('操作失败: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -561,6 +655,8 @@ function OutboundManagement() {
     setModalVisible(false)
     form.resetFields()
     setItems([])
+    setImages([])
+    setCurrentOrder(null) // 清空当前编辑的订单信息
   }
 
   // 获取状态标签
@@ -652,6 +748,14 @@ function OutboundManagement() {
           </Button>
           {record.status === 'PENDING' && (
             <>
+              <Button 
+                type="primary" 
+                size="small" 
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              >
+                编辑
+              </Button>
               <Button 
                 type="primary" 
                 size="small" 
@@ -946,15 +1050,24 @@ function OutboundManagement() {
     {
       title: '操作',
       key: 'action',
-      width: 80,
+      width: 120,
       render: (_, record) => (
-        <Button
-          type="primary"
-          size="small"
-          onClick={() => handleSelectDeviceVariant(record)}
-        >
-          选择
-        </Button>
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDeviceDetail(record)}
+            title="查看详情"
+          />
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => handleSelectDeviceVariant(record)}
+          >
+            选择
+          </Button>
+        </Space>
       )
     }
   ]
@@ -1340,11 +1453,11 @@ function OutboundManagement() {
             </Col>
           </Row>
 
-          {/* 出库明细 - 左右分布 */}
+          {/* 出库明细 - 左右均分布局 */}
           <Divider orientation="left">设备明细</Divider>
           <Row gutter={16} style={{ height: 500 }}>
             {/* 左侧：已选择的出库设备清单 */}
-            <Col span={8} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Col span={12} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div style={{ 
                 flex: 1, 
                 border: '1px solid #d9d9d9', 
@@ -1368,7 +1481,7 @@ function OutboundManagement() {
             </Col>
 
             {/* 右侧：仓库中的设备列表 */}
-            <Col span={16} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Col span={12} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div style={{ 
                 flex: 1, 
                 border: '1px solid #d9d9d9', 
@@ -1580,7 +1693,7 @@ function OutboundManagement() {
 
       {/* 设备详情弹窗 */}
       <Modal
-        title={selectedDeviceModel ? `${selectedDeviceModel.deviceName} - ${selectedDeviceModel.brand} ${selectedDeviceModel.model} (可选 ${deviceVariants.length} 台)` : "设备详情"}
+        title={selectedDeviceModel ? `${[selectedDeviceModel.deviceName, selectedDeviceModel.brand, selectedDeviceModel.model].filter(Boolean).join(' - ')} (可选 ${deviceVariants.length} 台)` : "设备详情"}
         open={deviceDetailVisible}
         onCancel={handleDeviceDetailCancel}
         footer={[
@@ -1588,7 +1701,7 @@ function OutboundManagement() {
             关闭
           </Button>
         ]}
-        width={selectedDeviceModel ? 800 : 600}
+        width={800}
       >
         {selectedDeviceModel ? (
           <div>
@@ -1602,15 +1715,40 @@ function OutboundManagement() {
                 <Descriptions.Item label="可选数量">{deviceVariants.length}</Descriptions.Item>
               </Descriptions>
             </div>
+            {/* 设备编号搜索框 */}
+            <div style={{ marginBottom: 16 }}>
+              <Input
+                placeholder="按设备编号查询（支持多个，以逗号分隔）"
+                prefix={<SearchOutlined />}
+                value={deviceVariantSearchText}
+                onChange={(e) => setDeviceVariantSearchText(e.target.value)}
+                allowClear
+              />
+            </div>
             <Table
-              dataSource={deviceVariants}
+              dataSource={getFilteredDeviceVariants()}
               columns={deviceVariantColumns}
               rowKey="id"
               pagination={{ pageSize: 10 }}
               size="small"
             />
           </div>
-        ) : selectedDevice ? (
+        ) : null}
+      </Modal>
+
+      {/* 单个设备详情弹窗 */}
+      <Modal
+        title="设备详情"
+        open={deviceSingleDetailVisible}
+        onCancel={() => setDeviceSingleDetailVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setDeviceSingleDetailVisible(false)}>
+            关闭
+          </Button>
+        ]}
+        width={600}
+      >
+        {selectedDevice ? (
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="设备类型">{selectedDevice.itemType}</Descriptions.Item>
             <Descriptions.Item label="设备名称">{selectedDevice.deviceName}</Descriptions.Item>

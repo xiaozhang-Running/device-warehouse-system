@@ -35,15 +35,52 @@ const OutboundOrderPrint = () => {
   }
 
   const items = orderData?.items?.map((item, index) => {
+    // 处理不同类型的设备
+    let deviceName = '-'
+    let snCode = '-'
+    let brand = '-'
+    let model = '-'
+    let shelfLocation = '-'
+    let quantity = item.quantity || 1
+    let unit = item.unit || '台'
+    
+    if (item.consumable) {
+      // 处理耗材
+      deviceName = item.consumable.consumableName || '-'
+      snCode = item.consumable.consumableCode || '-'
+      brand = item.consumable.brand || '-'
+      model = item.consumable.specification || item.consumable.model || '-'
+      shelfLocation = item.consumable.location || '-'
+      unit = item.consumable.unit || '个'
+    } else if (item.accessory) {
+      // 处理通用设备
+      deviceName = item.accessory.accessoryName || '-'
+      snCode = item.accessory.accessoryCode || '-'
+      brand = item.accessory.brand || '-'
+      model = item.accessory.specification || item.accessory.model || '-'
+      shelfLocation = item.accessory.location || '-'
+      unit = item.accessory.unit || '套'
+    } else if (item.device) {
+      // 处理专用设备
+      deviceName = item.device.deviceName || '-'
+      snCode = item.device.snCode || '-'
+      brand = item.device.brand || '-'
+      model = item.device.modelSpec || item.device.model || '-'
+      shelfLocation = item.device.location || '-'
+    } else if (item.brandModel) {
+      // 处理品牌型号格式的数据
+      deviceName = item.brandModel?.split(' ')[0] || '-'
+    }
+    
     return {
       index: index + 1,
-      deviceName: item.device?.deviceName || item.brandModel?.split(' ')[0] || '-',
-      snCode: item.device?.snCode || '-',
-      brand: item.device?.brand || '-',
-      model: item.device?.modelSpec || '-',
-      shelfLocation: item.device?.location || '-',
-      quantity: item.quantity || 1,
-      unit: item.unit || '台',
+      deviceName,
+      snCode,
+      brand,
+      model,
+      shelfLocation,
+      quantity,
+      unit,
       condition: item.deviceCondition || '-',
       accessories: item.remark || '-'
     }

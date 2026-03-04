@@ -18,8 +18,12 @@ public class AccessoryController {
     private AccessoryService accessoryService;
 
     @GetMapping
-    public List<Accessory> getAllAccessories() {
-        return accessoryService.getAllAccessories();
+    public List<Accessory> getAllAccessories(
+            @RequestParam(required = false) String accessoryName,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String usageStatus) {
+        return accessoryService.getAllAccessories(accessoryName, brand, status, usageStatus);
     }
 
     @GetMapping("/{id}")
