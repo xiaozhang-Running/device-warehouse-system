@@ -26,6 +26,9 @@ function OutboundManagement() {
   const [devicePagination, setDevicePagination] = useState({ current: 1, pageSize: 10 })
   const [deviceDetailVisible, setDeviceDetailVisible] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState(null)
+  const [deviceSummaryList, setDeviceSummaryList] = useState([]) // 设备汇总列表
+  const [selectedDeviceModel, setSelectedDeviceModel] = useState(null) // 当前选中的设备型号
+  const [deviceVariants, setDeviceVariants] = useState([]) // 当前型号的所有设备
   const processingFilesRef = useRef(new Set()) // 跟踪正在处理的文件
 
   useEffect(() => {
@@ -120,9 +123,46 @@ function OutboundManagement() {
 
       setAllDevices(allItems)
       setDevices(allItems)
+      
+      // 生成设备汇总列表（按设备型号分组）
+      generateDeviceSummary(allItems)
     } catch (error) {
       console.error('获取设备列表失败:', error)
     }
+  }
+
+  // 生成设备汇总列表（按设备型号分组）
+  const generateDeviceSummary = (allDevices) => {
+    // 按设备名称、品牌、型号分组
+    const deviceMap = new Map()
+    
+    allDevices.forEach(device => {
+      const key = `${device.deviceName}-${device.brand}-${device.model}`
+      if (!deviceMap.has(key)) {
+        deviceMap.set(key, {
+          deviceName: device.deviceName,
+          brand: device.brand,
+          model: device.model,
+          itemType: device.itemType,
+          unit: device.unit || (device.itemType === '耗材' ? '个' : device.itemType === '通用设备' ? '套' : '台'),
+          count: 0,
+          variants: []
+        })
+      }
+      
+      const summary = deviceMap.get(key)
+      // 对于耗材，按实际数量统计
+      if (device.itemType === '耗材') {
+        summary.count += device.remainingQuantity || device.quantity || 1
+      } else {
+        summary.count++
+      }
+      summary.variants.push(device)
+    })
+    
+    // 转换为数组并排序
+    const summaryList = Array.from(deviceMap.values()).sort((a, b) => b.count - a.count)
+    setDeviceSummaryList(summaryList)
   }
 
   // 获取用户列表
@@ -196,8 +236,47 @@ function OutboundManagement() {
     }
     
     setDevices(filtered)
+    // 同时更新设备汇总列表
+    generateDeviceSummary(filtered)
   }
   
+  // 处理设备型号选择，弹出该型号的所有设备
+  const handleSelectDeviceModel = (model) => {
+    setSelectedDeviceModel(model)
+    setDeviceVariants(model.variants)
+    setDeviceDetailVisible(true)
+  }
+
+  // 处理设备选择（从变体列表中选择）
+  const handleSelectDeviceVariant = (device) => {
+    handleAddDevice(device)
+    
+    // 对于非耗材设备，从变体列表中移除
+    if (device.itemType !== '耗材') {
+      setDeviceVariants(prev => prev.filter(d => d.id !== device.id))
+    }
+    
+    // 更新汇总列表中的数量
+    setDeviceSummaryList(prev => prev.map(item => {
+      if (item.deviceName === selectedDeviceModel.deviceName && 
+          item.brand === selectedDeviceModel.brand && 
+          item.model === selectedDeviceModel.model) {
+        // 对于耗材，减去实际选择的数量（默认1）
+        // 注意：这里简化处理，实际应该根据用户输入的数量来减
+        return { ...item, count: Math.max(0, item.count - 1) }
+      }
+      return item
+    }))
+  }
+
+  // 关闭设备详情弹窗
+  const handleDeviceDetailCancel = () => {
+    setDeviceDetailVisible(false)
+    setSelectedDevice(null)
+    setSelectedDeviceModel(null)
+    setDeviceVariants([])
+  }
+
   // 处理设备类型变化
   const handleTypeChange = (type) => {
     setSelectedType(type)
@@ -823,6 +902,130 @@ function OutboundManagement() {
     }
   ]
 
+  // 设备变体列表列
+  const deviceVariantColumns = [
+    {
+      title: '设备编号',
+      dataIndex: 'deviceCode',
+      key: 'deviceCode',
+      width: 150
+    },
+    {
+      title: 'SN码',
+      dataIndex: 'snCode',
+      key: 'snCode',
+      width: 150,
+      render: (snCode) => snCode || '-'
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      render: (status) => (
+        <Tag color={status === '正常' ? 'green' : 'default'} size="small">
+          {status || '正常'}
+        </Tag>
+      )
+    },
+    {
+      title: '位置',
+      dataIndex: 'location',
+      key: 'location',
+      width: 120,
+      ellipsis: true,
+      render: (location) => location || '-'
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      ellipsis: true,
+      render: (remark) => remark || '-'
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => handleSelectDeviceVariant(record)}
+        >
+          选择
+        </Button>
+      )
+    }
+  ]
+
+  // 设备汇总列表列
+  const deviceSummaryColumns = [
+    {
+      title: '类型',
+      dataIndex: 'itemType',
+      key: 'itemType',
+      width: 70,
+      render: (type) => {
+        const typeColors = {
+          '专用设备': 'blue',
+          '通用设备': 'green',
+          '耗材': 'orange',
+          '物料': 'purple'
+        }
+        return <Tag color={typeColors[type] || 'default'} size="small">{type}</Tag>
+      }
+    },
+    {
+      title: '设备名称',
+      dataIndex: 'deviceName',
+      key: 'deviceName',
+      width: 150,
+      ellipsis: true
+    },
+    {
+      title: '品牌',
+      dataIndex: 'brand',
+      key: 'brand',
+      width: 100,
+      ellipsis: true
+    },
+    {
+      title: '型号',
+      dataIndex: 'model',
+      key: 'model',
+      width: 150,
+      ellipsis: true
+    },
+    {
+      title: '可用数量',
+      dataIndex: 'count',
+      key: 'count',
+      width: 80,
+      render: (count) => <span style={{ fontWeight: 'bold' }}>{count}</span>
+    },
+    {
+      title: '单位',
+      dataIndex: 'unit',
+      key: 'unit',
+      width: 60
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => handleSelectDeviceModel(record)}
+        >
+          选择
+        </Button>
+      )
+    }
+  ]
+
   // 仓库设备列表列
   const warehouseDeviceColumns = [
     {
@@ -954,7 +1157,7 @@ function OutboundManagement() {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         confirmLoading={loading}
-        width={1400}
+        width={1600}
         style={{ top: 20 }}
       >
         <Form form={form} layout="vertical">
@@ -1141,7 +1344,7 @@ function OutboundManagement() {
           <Divider orientation="left">设备明细</Divider>
           <Row gutter={16} style={{ height: 500 }}>
             {/* 左侧：已选择的出库设备清单 */}
-            <Col span={12} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Col span={8} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div style={{ 
                 flex: 1, 
                 border: '1px solid #d9d9d9', 
@@ -1165,7 +1368,7 @@ function OutboundManagement() {
             </Col>
 
             {/* 右侧：仓库中的设备列表 */}
-            <Col span={12} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Col span={16} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div style={{ 
                 flex: 1, 
                 border: '1px solid #d9d9d9', 
@@ -1174,9 +1377,9 @@ function OutboundManagement() {
                 backgroundColor: '#f0f9ff'
               }}>
                 <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, marginBottom: 12 }}>仓库设备</h3>
+                  <h3 style={{ margin: 0, marginBottom: 12 }}>仓库设备（汇总）</h3>
                   <Row gutter={8}>
-                    <Col span={8}>
+                    <Col span={6}>
                       <Select
                         placeholder="设备类型"
                         value={selectedType || undefined}
@@ -1189,9 +1392,9 @@ function OutboundManagement() {
                         <Option value="耗材">耗材</Option>
                       </Select>
                     </Col>
-                    <Col span={16}>
+                    <Col span={18}>
                       <Input
-                        placeholder="搜索设备名称、编号或品牌"
+                        placeholder="搜索设备名称、品牌或型号"
                         prefix={<SearchOutlined />}
                         value={searchText}
                         onChange={(e) => handleSearch(e.target.value)}
@@ -1201,9 +1404,9 @@ function OutboundManagement() {
                   </Row>
                 </div>
                 <Table
-                  dataSource={devices}
-                  columns={warehouseDeviceColumns}
-                  rowKey="id"
+                  dataSource={deviceSummaryList}
+                  columns={deviceSummaryColumns}
+                  rowKey="deviceName"
                   pagination={{
                     current: devicePagination.current,
                     pageSize: devicePagination.pageSize,
@@ -1220,10 +1423,6 @@ function OutboundManagement() {
                   }}
                   size="small"
                   scroll={{ y: 320 }}
-                  onRow={(record) => ({
-                    onDoubleClick: () => handleAddDevice(record),
-                    style: { cursor: 'pointer' }
-                  })}
                 />
               </div>
             </Col>
@@ -1381,17 +1580,37 @@ function OutboundManagement() {
 
       {/* 设备详情弹窗 */}
       <Modal
-        title="设备详情"
+        title={selectedDeviceModel ? `${selectedDeviceModel.deviceName} - ${selectedDeviceModel.brand} ${selectedDeviceModel.model} (可选 ${deviceVariants.length} 台)` : "设备详情"}
         open={deviceDetailVisible}
-        onCancel={() => setDeviceDetailVisible(false)}
+        onCancel={handleDeviceDetailCancel}
         footer={[
-          <Button key="close" onClick={() => setDeviceDetailVisible(false)}>
+          <Button key="close" onClick={handleDeviceDetailCancel}>
             关闭
           </Button>
         ]}
-        width={600}
+        width={selectedDeviceModel ? 800 : 600}
       >
-        {selectedDevice && (
+        {selectedDeviceModel ? (
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <Descriptions bordered column={3} size="small">
+                <Descriptions.Item label="设备类型">{selectedDeviceModel.itemType}</Descriptions.Item>
+                <Descriptions.Item label="设备名称">{selectedDeviceModel.deviceName}</Descriptions.Item>
+                <Descriptions.Item label="品牌">{selectedDeviceModel.brand}</Descriptions.Item>
+                <Descriptions.Item label="型号">{selectedDeviceModel.model}</Descriptions.Item>
+                <Descriptions.Item label="单位">{selectedDeviceModel.unit}</Descriptions.Item>
+                <Descriptions.Item label="可选数量">{deviceVariants.length}</Descriptions.Item>
+              </Descriptions>
+            </div>
+            <Table
+              dataSource={deviceVariants}
+              columns={deviceVariantColumns}
+              rowKey="id"
+              pagination={{ pageSize: 10 }}
+              size="small"
+            />
+          </div>
+        ) : selectedDevice ? (
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="设备类型">{selectedDevice.itemType}</Descriptions.Item>
             <Descriptions.Item label="设备名称">{selectedDevice.deviceName}</Descriptions.Item>
@@ -1428,7 +1647,7 @@ function OutboundManagement() {
             )}
             <Descriptions.Item label="备注" span={2}>{selectedDevice.remark || '-'}</Descriptions.Item>
           </Descriptions>
-        )}
+        ) : null}
       </Modal>
     </div>
   )
