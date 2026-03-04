@@ -11,18 +11,59 @@ const AccessoryManagement = () => {
   const [modalVisible, setModalVisible] = useState(false)
   const [editingAccessory, setEditingAccessory] = useState(null)
   const [form] = Form.useForm()
-  const [searchText, setSearchText] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState('')
-  const [selectedUsageStatus, setSelectedUsageStatus] = useState('')
+  const [filters, setFilters] = useState({})
+  const [filterForm] = Form.useForm()
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
+  const [currentUser, setCurrentUser] = useState(null)
+  const [companies, setCompanies] = useState([])
+  const [warehouses, setWarehouses] = useState([])
 
   useEffect(() => {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      setCurrentUser(JSON.parse(userStr))
+    }
     fetchAccessories()
+    fetchCompanies()
+    fetchWarehouses()
   }, [])
 
-  const fetchAccessories = async () => {
+  // 获取公司列表
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('/api/companies')
+      if (response.ok) {
+        const data = await response.json()
+        setCompanies(data)
+      }
+    } catch (error) {
+      console.error('获取公司列表失败:', error)
+    }
+  }
+
+  // 获取仓库列表
+  const fetchWarehouses = async () => {
+    try {
+      const response = await fetch('/api/warehouses')
+      if (response.ok) {
+        const data = await response.json()
+        setWarehouses(data)
+      }
+    } catch (error) {
+      console.error('获取仓库列表失败:', error)
+    }
+  }
+
+  const fetchAccessories = async (filterParams = {}) => {
     setLoading(true)
     try {
-      const response = await fetch('/api/accessories')
+      const queryParams = new URLSearchParams()
+      Object.entries(filterParams).forEach(([key, value]) => {
+        if (value) {
+          queryParams.append(key, value)
+        }
+      })
+      const response = await fetch(`/api/accessories?${queryParams.toString()}`)
       const data = await response.json()
       setAccessories(data)
       setFilteredAccessories(data)
@@ -34,55 +75,15 @@ const AccessoryManagement = () => {
     }
   }
 
-  // 筛选功能
-  const handleSearch = (value) => {
-    setSearchText(value)
-    filterAccessories(value, selectedStatus, selectedUsageStatus)
+  const handleFilterSubmit = async (values) => {
+    setFilters(values)
+    fetchAccessories(values)
   }
 
-  const handleStatusChange = (value) => {
-    setSelectedStatus(value)
-    filterAccessories(searchText, value, selectedUsageStatus)
-  }
-
-  const handleUsageStatusChange = (value) => {
-    setSelectedUsageStatus(value)
-    filterAccessories(searchText, selectedStatus, value)
-  }
-
-  const filterAccessories = (search, status, usageStatus) => {
-    let filtered = [...accessories]
-
-    // 按搜索文本筛选
-    if (search && search.trim() !== '') {
-      const searchLower = search.toLowerCase()
-      filtered = filtered.filter(item =>
-        (item.accessoryName && item.accessoryName.toLowerCase().includes(searchLower)) ||
-        (item.accessoryCode && item.accessoryCode.toLowerCase().includes(searchLower)) ||
-        (item.brand && item.brand.toLowerCase().includes(searchLower)) ||
-        (item.modelSpec && item.modelSpec.toLowerCase().includes(searchLower)) ||
-        (item.snCode && item.snCode.toLowerCase().includes(searchLower))
-      )
-    }
-
-    // 按设备状态筛选
-    if (status && status !== '') {
-      filtered = filtered.filter(item => item.status === status)
-    }
-
-    // 按使用状态筛选
-    if (usageStatus && usageStatus !== '') {
-      filtered = filtered.filter(item => item.usageStatus === usageStatus)
-    }
-
-    setFilteredAccessories(filtered)
-  }
-
-  const clearFilters = () => {
-    setSearchText('')
-    setSelectedStatus('')
-    setSelectedUsageStatus('')
-    setFilteredAccessories(accessories)
+  const handleFilterReset = () => {
+    filterForm.resetFields()
+    setFilters({})
+    fetchAccessories({})
   }
 
   const handleClearAll = async () => {
@@ -103,9 +104,38 @@ const AccessoryManagement = () => {
     }
   }
 
+  // 获取同名设备的最大编号
+  const getMaxAccessoryCode = (accessoryName) => {
+    const sameNameAccessories = accessories.filter(a => a.accessoryName === accessoryName)
+    if (sameNameAccessories.length === 0) return 0
+    
+    let maxNum = 0
+    sameNameAccessories.forEach(a => {
+      const code = a.accessoryCode
+      if (code) {
+        const match = code.match(/TY-.+-([0-9]+)$/)
+        if (match) {
+          const num = parseInt(match[1])
+          if (num > maxNum) maxNum = num
+        }
+      }
+    })
+    
+    return maxNum === 0 ? sameNameAccessories.length : maxNum
+  }
+
+  // 生成设备编号
+  const generateAccessoryCode = (accessoryName, startNum = 1) => {
+    return `TY-${accessoryName}-${String(startNum).padStart(3, '0')}`
+  }
+
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields()
+      if (currentUser) {
+        values.createdBy = currentUser.username
+        values.updatedBy = currentUser.username
+      }
       const url = editingAccessory 
         ? `/api/accessories/${editingAccessory.id}`
         : '/api/accessories'
@@ -214,7 +244,16 @@ const AccessoryManagement = () => {
       dataIndex: 'otherAccessories',
       key: 'otherAccessories',
       width: 200,
-      ellipsis: true
+      ellipsis: true,
+      render: (text) => (
+        <div style={{ 
+          whiteSpace: 'normal', 
+          wordBreak: 'break-word',
+          lineHeight: '1.5'
+        }}>
+          {text || '-'}
+        </div>
+      )
     },
     {
       title: '设备状态',
@@ -241,12 +280,25 @@ const AccessoryManagement = () => {
       render: (status) => {
         const statusMap = {
           '未使用': { color: '#52c41a', text: '未使用' },
-          '使用中': { color: '#1890ff', text: '使用中' },
+          '预留中': { color: '#1890ff', text: '预留中' },
+          '使用中': { color: '#ff4d4f', text: '使用中' },
           '维修中': { color: '#faad14', text: '维修中' }
         }
         const statusInfo = statusMap[status] || { color: '#999', text: status || '未使用' }
         return <span style={{ color: statusInfo.color }}>{statusInfo.text}</span>
       }
+    },
+    {
+      title: '所属公司',
+      dataIndex: 'company',
+      key: 'company',
+      width: 120
+    },
+    {
+      title: '所在仓库',
+      dataIndex: 'location',
+      key: 'location',
+      width: 100
     },
     {
       title: '备注',
@@ -258,11 +310,17 @@ const AccessoryManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 100,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="middle">
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+        <Space size="small">
+          <Button 
+            type="link" 
+            size="small"
+            icon={<EditOutlined />} 
+            onClick={() => handleEdit(record)}
+            style={{ padding: '0 4px' }}
+          >
             编辑
           </Button>
           <Popconfirm
@@ -271,7 +329,13 @@ const AccessoryManagement = () => {
             okText="确定"
             cancelText="取消"
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button 
+              type="link" 
+              danger 
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{ padding: '0 4px' }}
+            >
               删除
             </Button>
           </Popconfirm>
@@ -282,10 +346,10 @@ const AccessoryManagement = () => {
 
   return (
     <div>
-      <Card>
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 className="page-title">通用设备管理</h2>
+      <Card styles={{ body: { padding: '12px 24px' } }}>
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, padding: '8px 0' }}>
+            <h2 className="page-title" style={{ margin: 0, fontSize: '18px', lineHeight: '1.2' }}>通用设备管理</h2>
             <Space>
               <Popconfirm
                 title="确定要清空所有通用设备数据吗？此操作不可恢复！"
@@ -298,70 +362,81 @@ const AccessoryManagement = () => {
               <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                 setEditingAccessory(null)
                 form.resetFields()
+                // 自动填充序号为设备总数+1
+                const nextSeq = accessories.length + 1
+                form.setFieldsValue({ seqNo: nextSeq })
                 setModalVisible(true)
               }}>
-                添加配件
+                添加通用设备
               </Button>
             </Space>
-          </div>
-          
-          {/* 筛选区域 */}
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Input
-              placeholder="搜索名称、编号、品牌或型号"
-              value={searchText}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: 250 }}
-              allowClear
-            />
-            <Select
-              placeholder="设备状态"
-              value={selectedStatus || undefined}
-              onChange={handleStatusChange}
-              style={{ width: 120 }}
-              allowClear
-            >
-              <Option value="正常">正常</Option>
-              <Option value="维修中">维修中</Option>
-              <Option value="报废">报废</Option>
-            </Select>
-            <Select
-              placeholder="使用状态"
-              value={selectedUsageStatus || undefined}
-              onChange={handleUsageStatusChange}
-              style={{ width: 120 }}
-              allowClear
-            >
-              <Option value="未使用">未使用</Option>
-              <Option value="使用中">使用中</Option>
-              <Option value="维修中">维修中</Option>
-            </Select>
-            <Button onClick={clearFilters}>清空筛选</Button>
-            <span style={{ color: '#999', marginLeft: 'auto' }}>
-              共 {filteredAccessories.length} 条记录
-            </span>
           </div>
         </Space>
       </Card>
       
       <Card style={{ marginTop: 16 }}>
+        <Form
+          form={filterForm}
+          layout="inline"
+          onFinish={handleFilterSubmit}
+          style={{ marginBottom: 16 }}
+        >
+          <Form.Item label="名称" name="accessoryName">
+            <Input placeholder="请输入名称" style={{ width: 150 }} />
+          </Form.Item>
+          <Form.Item label="品牌" name="brand">
+            <Input placeholder="请输入品牌" style={{ width: 120 }} />
+          </Form.Item>
+          <Form.Item label="设备状态" name="status">
+            <Select placeholder="请选择设备状态" style={{ width: 100 }} allowClear>
+              <Select.Option value="正常">正常</Select.Option>
+              <Select.Option value="维修中">维修中</Select.Option>
+              <Select.Option value="报废">报废</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item label="使用状态" name="usageStatus">
+            <Select placeholder="请选择使用状态" style={{ width: 100 }} allowClear>
+              <Select.Option value="未使用">未使用</Select.Option>
+              <Select.Option value="预留中">预留中</Select.Option>
+              <Select.Option value="使用中">使用中</Select.Option>
+              <Select.Option value="维修中">维修中</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                筛选
+              </Button>
+              <Button onClick={handleFilterReset}>
+                重置
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
         <Table
           columns={columns}
           dataSource={filteredAccessories}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1500 }}
+          scroll={{ x: 1800 }}
+          bordered
+          size="small"
+          rowClassName={(record, index) => index % 2 === 0 ? 'even-row' : 'odd-row'}
           pagination={{
-            defaultPageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '50', '100', '200', '500', '1000'],
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`
+            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+            onChange: (page, pageSize) => {
+              setPagination({ current: page, pageSize })
+            }
           }}
         />
       </Card>
 
       <Modal
-        title={editingAccessory ? '编辑配件' : '添加配件'}
+        title={editingAccessory ? '编辑设备' : '添加通用设备'}
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => {
@@ -369,12 +444,18 @@ const AccessoryManagement = () => {
           form.resetFields()
           setEditingAccessory(null)
         }}
-        width={700}
+        width={1200}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
             <Form.Item label="序号" name="seqNo">
-              <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入序号" />
+              <InputNumber 
+                min={1} 
+                style={{ width: '100%' }} 
+                placeholder="自动填充" 
+                disabled={!editingAccessory}
+              />
             </Form.Item>
             
             <Form.Item
@@ -382,11 +463,22 @@ const AccessoryManagement = () => {
               name="accessoryName"
               rules={[{ required: true, message: '请输入名称' }]}
             >
-              <Input placeholder="请输入名称" />
+              <Input 
+                placeholder="请输入名称" 
+                onChange={(e) => {
+                  const accessoryName = e.target.value
+                  if (accessoryName && !editingAccessory) {
+                    const maxNum = getMaxAccessoryCode(accessoryName)
+                    const nextNum = maxNum + 1
+                    const accessoryCode = generateAccessoryCode(accessoryName, nextNum)
+                    form.setFieldsValue({ accessoryCode })
+                  }
+                }}
+              />
             </Form.Item>
             
             <Form.Item label="设备编号" name="accessoryCode">
-              <Input placeholder="请输入设备编号" />
+              <Input placeholder="自动填充，可手动修改" />
             </Form.Item>
             
             <Form.Item label="SN码" name="snCode">
@@ -402,39 +494,61 @@ const AccessoryManagement = () => {
             </Form.Item>
             
             <Form.Item label="数量" name="quantity">
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入数量" />
+              <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入数量" />
             </Form.Item>
             
             <Form.Item label="单位" name="unit">
-              <Input placeholder="请输入单位" />
+              <Select placeholder="请选择单位" allowClear>
+                <Select.Option value="个">个</Select.Option>
+                <Select.Option value="台">台</Select.Option>
+                <Select.Option value="套">套</Select.Option>
+                <Select.Option value="件">件</Select.Option>
+              </Select>
             </Form.Item>
             
             <Form.Item label="设备状态" name="status">
               <Select placeholder="请选择设备状态">
-                <Option value="正常">正常</Option>
-                <Option value="维修中">维修中</Option>
-                <Option value="报废">报废</Option>
+                <Select.Option value="正常">正常</Select.Option>
+                <Select.Option value="维修中">维修中</Select.Option>
+                <Select.Option value="报废">报废</Select.Option>
               </Select>
             </Form.Item>
             
             <Form.Item label="使用状态" name="usageStatus">
               <Select placeholder="请选择使用状态">
-                <Option value="未使用">未使用</Option>
-                <Option value="使用中">使用中</Option>
-                <Option value="维修中">维修中</Option>
+                <Select.Option value="未使用">未使用</Select.Option>
+                <Select.Option value="预留中">预留中</Select.Option>
+                <Select.Option value="使用中">使用中</Select.Option>
+                <Select.Option value="维修中">维修中</Select.Option>
+              </Select>
+            </Form.Item>
+            
+            <Form.Item label="所属公司" name="company">
+              <Select placeholder="请选择所属公司" allowClear>
+                {companies.map(company => (
+                  <Select.Option key={company.id} value={company.name}>{company.name}</Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+            
+            <Form.Item label="所在仓库" name="location">
+              <Select placeholder="请选择所在仓库" allowClear>
+                {warehouses.map(warehouse => (
+                  <Select.Option key={warehouse.id} value={warehouse.name}>{warehouse.name}</Select.Option>
+                ))}
               </Select>
             </Form.Item>
           </div>
           
-          <Form.Item label="配件" name="otherAccessories">
-            <Input.TextArea rows={2} placeholder="请输入配件信息" />
+          <Form.Item label="其余配件" name="otherAccessories" style={{ gridColumn: 'span 6' }}>
+            <Input.TextArea rows={2} placeholder="请输入其余配件" />
           </Form.Item>
           
-          <Form.Item label="图片URL" name="imageUrl">
+          <Form.Item label="图片URL" name="imageUrl" style={{ gridColumn: 'span 6' }}>
             <Input placeholder="请输入图片URL" />
           </Form.Item>
           
-          <Form.Item label="备注" name="remark">
+          <Form.Item label="备注" name="remark" style={{ gridColumn: 'span 6' }}>
             <Input.TextArea rows={3} placeholder="请输入备注" />
           </Form.Item>
         </Form>

@@ -12,11 +12,11 @@ import java.util.List;
 public interface OutboundOrderItemRepository extends JpaRepository<OutboundOrderItem, Long> {
     
     /**
-     * 根据出库单ID查询明细列表（包含设备信息）
+     * 根据出库单ID查询明细列表（包含设备、耗材、通用设备、物料信息）
      * 
      * @param orderId 出库单ID
      * @return 出库明细列表
      */
-    @Query("SELECT o FROM OutboundOrderItem o LEFT JOIN FETCH o.device WHERE o.order.id = :orderId")
+    @Query("SELECT o FROM OutboundOrderItem o LEFT JOIN FETCH o.device LEFT JOIN FETCH o.consumable LEFT JOIN FETCH o.accessory LEFT JOIN FETCH o.material WHERE o.order.id = :orderId")
     List<OutboundOrderItem> findByOrderId(@Param("orderId") Long orderId);
 }

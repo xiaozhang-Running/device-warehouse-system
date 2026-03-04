@@ -109,10 +109,12 @@ public class DashboardService {
         stats.setTodayOutbound(outboundOrders.stream()
                 .filter(order -> order.getOrderDate() != null)
                 .filter(order -> {
-                    LocalDateTime orderDate = order.getOrderDate().toInstant()
+                    // 使用新的Date对象避免java.sql.Date的限制
+                    java.util.Date utilDate = new java.util.Date(order.getOrderDate().getTime());
+                    LocalDate orderLocalDate = utilDate.toInstant()
                             .atZone(ZoneId.systemDefault())
-                            .toLocalDateTime();
-                    return !orderDate.isBefore(todayStart) && orderDate.isBefore(todayEnd);
+                            .toLocalDate();
+                    return !orderLocalDate.isBefore(today) && orderLocalDate.isBefore(today.plusDays(1));
                 })
                 .count());
 
@@ -120,10 +122,12 @@ public class DashboardService {
         stats.setMonthOutbound(outboundOrders.stream()
                 .filter(order -> order.getOrderDate() != null)
                 .filter(order -> {
-                    LocalDateTime orderDate = order.getOrderDate().toInstant()
+                    // 使用新的Date对象避免java.sql.Date的限制
+                    java.util.Date utilDate = new java.util.Date(order.getOrderDate().getTime());
+                    LocalDate orderLocalDate = utilDate.toInstant()
                             .atZone(ZoneId.systemDefault())
-                            .toLocalDateTime();
-                    return !orderDate.isBefore(monthStartTime);
+                            .toLocalDate();
+                    return !orderLocalDate.isBefore(monthStart);
                 })
                 .count());
 
@@ -138,10 +142,10 @@ public class DashboardService {
                 .forEach(order -> {
                     Map<String, Object> activity = new HashMap<>();
                     activity.put("type", "入库");
-                    activity.put("device", order.getOrderCode());
+                    activity.put("device", order.getOrderCode() != null ? order.getOrderCode() : "-");
                     activity.put("quantity", order.getTotalQuantity() != null ? order.getTotalQuantity() : 0);
                     activity.put("time", order.getOrderDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
-                    activity.put("operator", order.getOperator());
+                    activity.put("operator", order.getOperator() != null ? order.getOperator() : "系统");
                     recentActivities.add(activity);
                 });
 
@@ -153,7 +157,7 @@ public class DashboardService {
                 .forEach(order -> {
                     Map<String, Object> activity = new HashMap<>();
                     activity.put("type", "出库");
-                    activity.put("device", order.getOrderCode());
+                    activity.put("device", order.getOrderCode() != null ? order.getOrderCode() : "-");
                     int totalQty = order.getItems() != null ? 
                             order.getItems().stream().mapToInt(item -> item.getQuantity() != null ? item.getQuantity() : 0).sum() : 0;
                     activity.put("quantity", totalQty);

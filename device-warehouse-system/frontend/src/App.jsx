@@ -18,7 +18,8 @@ import {
   AppstoreOutlined,
   ShoppingOutlined,
   UploadOutlined,
-  ExperimentOutlined
+  ExperimentOutlined,
+  DesktopOutlined
 } from '@ant-design/icons'
 
 // 页面组件
@@ -26,7 +27,11 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import DeviceManagement from './pages/DeviceManagement'
 import InboundManagement from './pages/InboundManagement'
+import DeviceInboundManagement from './pages/DeviceInboundManagement'
+import ProjectInboundManagement from './pages/ProjectInboundManagement'
+import MaterialInboundManagement from './pages/MaterialInboundManagement'
 import OutboundManagement from './pages/OutboundManagement'
+import MaterialOutboundManagement from './pages/MaterialOutboundManagement'
 import OutboundOrderPrint from './pages/OutboundOrderPrint'
 import InventoryManagement from './pages/InventoryManagement'
 import LocationManagement from './pages/LocationManagement'
@@ -36,6 +41,7 @@ import AccessoryManagement from './pages/AccessoryManagement'
 import ConsumableManagement from './pages/ConsumableManagement'
 import DataImport from './pages/DataImport'
 import MaterialManagement from './pages/MaterialManagement'
+import OfficeSupplyManagement from './pages/OfficeSupplyManagement'
 
 const { Header, Sider, Content } = Layout
 
@@ -134,16 +140,40 @@ function MainLayout() {
         key: 'outbound',
         icon: <ExportOutlined />,
         label: '出库管理',
+        children: [
+          {
+            key: 'outbound',
+            label: '项目出库',
+          },
+          {
+            key: 'material-outbound',
+            label: '原材料出库',
+          },
+        ],
       },
       {
         key: 'inbound',
         icon: <InboxOutlined />,
         label: '入库管理',
+        children: [
+          {
+            key: 'inbound',
+            label: '设备采购入库',
+          },
+          {
+            key: 'project-inbound',
+            label: '项目入库',
+          },
+          {
+            key: 'material-inbound',
+            label: '原材料入库',
+          },
+        ],
       },
       {
         key: 'locations',
         icon: <HomeOutlined />,
-        label: '位置管理',
+        label: '库房管理',
       },
       {
         key: 'reports',
@@ -163,14 +193,19 @@ function MainLayout() {
         label: '用户管理',
       },
       {
-        key: 'import',
-        icon: <UploadOutlined />,
-        label: '数据导入',
+        key: 'office-supplies',
+        icon: <DesktopOutlined />,
+        label: '办公用品管理',
       },
       {
         key: 'materials',
         icon: <ExperimentOutlined />,
         label: '原材料管理',
+      },
+      {
+        key: 'import',
+        icon: <UploadOutlined />,
+        label: '数据导入',
       },
     ]
 
@@ -228,14 +263,30 @@ function MainLayout() {
             <Route path="devices" element={<DeviceManagement />} />
             <Route path="accessories" element={<AccessoryManagement />} />
             <Route path="consumables" element={<ConsumableManagement />} />
+            <Route path="office-supplies" element={<OfficeSupplyManagement />} />
             <Route path="inbound" element={
               <ProtectedRoute requiredRole="操作员">
-                <InboundManagement />
+                <DeviceInboundManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="project-inbound" element={
+              <ProtectedRoute requiredRole="操作员">
+                <ProjectInboundManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="material-inbound" element={
+              <ProtectedRoute requiredRole="操作员">
+                <MaterialInboundManagement />
               </ProtectedRoute>
             } />
             <Route path="outbound" element={
               <ProtectedRoute requiredRole="操作员">
                 <OutboundManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="material-outbound" element={
+              <ProtectedRoute requiredRole="操作员">
+                <MaterialOutboundManagement />
               </ProtectedRoute>
             } />
             <Route path="outbound/print/:id" element={

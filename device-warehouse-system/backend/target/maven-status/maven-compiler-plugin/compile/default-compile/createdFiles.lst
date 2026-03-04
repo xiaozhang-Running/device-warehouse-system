@@ -24,6 +24,7 @@ com\device\warehouse\repository\OutboundOrderItemRepository.class
 com\device\warehouse\controller\CompanyController.class
 com\device\warehouse\controller\ConsumableController.class
 com\device\warehouse\service\UserService.class
+com\device\warehouse\service\OfficeSupplyService.class
 com\device\warehouse\repository\DeviceImageRepository.class
 com\device\warehouse\service\InboundOrderService.class
 com\device\warehouse\repository\InventoryAlertConfigRepository.class
@@ -52,9 +53,12 @@ com\device\warehouse\controller\DataImportController.class
 com\device\warehouse\entity\Location.class
 com\device\warehouse\repository\InboundOrderRepository.class
 com\device\warehouse\repository\InboundOrderItemRepository.class
+com\device\warehouse\entity\OfficeSupply.class
+com\device\warehouse\repository\OfficeSupplyRepository.class
 com\device\warehouse\repository\ConsumableRepository.class
 com\device\warehouse\controller\OutboundOrderController.class
 com\device\warehouse\repository\InventoryRepository.class
+com\device\warehouse\controller\OfficeSupplyController.class
 com\device\warehouse\service\ConsumableService.class
 com\device\warehouse\service\AuthService.class
 com\device\warehouse\controller\MaterialController.class

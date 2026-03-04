@@ -8,6 +8,7 @@ C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\InventoryAlertConfig.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Consumable.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Company.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\OfficeSupplyController.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\DashboardController.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\DeviceImage.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\ConsumableRepository.java
@@ -44,6 +45,7 @@ C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Location.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\ConsumableController.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\AuthService.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\OfficeSupplyService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\WarehouseService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\ConsumableService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\UserRepository.java
@@ -53,9 +55,11 @@ C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Material.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\OutboundOrderItemRepository.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\DeviceImageService.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\OfficeSupply.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\InboundOrderService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\dto\InventorySummaryDTO.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\OutboundOrderController.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\UserService.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\OfficeSupplyRepository.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\DeviceImageController.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\InboundOrderController.java

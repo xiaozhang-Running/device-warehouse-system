@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Button, Modal, Form, Input, message, Space, Popconfirm, InputNumber, Select } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ClearOutlined } from '@ant-design/icons'
+import { Card, Table, Button, Modal, Form, Input, message, Space, Popconfirm, InputNumber, Select, AutoComplete, Upload } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, ClearOutlined, UploadOutlined } from '@ant-design/icons'
 
 const { Option } = Select
 
@@ -13,10 +13,48 @@ const ConsumableManagement = () => {
   const [form] = Form.useForm()
   const [searchText, setSearchText] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('')
+  const [companies, setCompanies] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [consumableOptions, setConsumableOptions] = useState([])
+  const [brandOptions, setBrandOptions] = useState([])
+  const [modelSpecOptions, setModelSpecOptions] = useState([])
+  const [unitOptions, setUnitOptions] = useState([])
+  const [formImages, setFormImages] = useState([])
+  const [uploadingFiles, setUploadingFiles] = useState(new Set())
+  const [selectedConsumableName, setSelectedConsumableName] = useState('')
+  const [isExistingConsumable, setIsExistingConsumable] = useState(false)
 
   useEffect(() => {
     fetchConsumables()
+    fetchCompanies()
+    fetchWarehouses()
   }, [])
+
+  // 获取公司列表
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('/api/companies')
+      if (response.ok) {
+        const data = await response.json()
+        setCompanies(data)
+      }
+    } catch (error) {
+      console.error('获取公司列表失败:', error)
+    }
+  }
+
+  // 获取仓库列表
+  const fetchWarehouses = async () => {
+    try {
+      const response = await fetch('/api/warehouses')
+      if (response.ok) {
+        const data = await response.json()
+        setWarehouses(data)
+      }
+    } catch (error) {
+      console.error('获取仓库列表失败:', error)
+    }
+  }
 
   const fetchConsumables = async () => {
     setLoading(true)
@@ -25,11 +63,86 @@ const ConsumableManagement = () => {
       const data = await response.json()
       setConsumables(data)
       setFilteredConsumables(data)
+      // 设置耗材名称选项用于自动完成
+      const options = data.map(item => ({
+        value: item.consumableName,
+        label: item.consumableName,
+        data: item
+      }))
+      setConsumableOptions(options)
+      
+      // 设置品牌选项用于自动完成（去重）
+      const uniqueBrands = [...new Set(data.map(item => item.brand).filter(Boolean))]
+      setBrandOptions(uniqueBrands.map(brand => ({ value: brand, label: brand })))
+      
+      // 设置型号规格选项用于自动完成（去重）
+      const uniqueModelSpecs = [...new Set(data.map(item => item.modelSpec).filter(Boolean))]
+      setModelSpecOptions(uniqueModelSpecs.map(spec => ({ value: spec, label: spec })))
+      
+      // 设置单位选项用于自动完成（去重）
+      const uniqueUnits = [...new Set(data.map(item => item.unit).filter(Boolean))]
+      setUnitOptions(uniqueUnits.map(unit => ({ value: unit, label: unit })))
     } catch (error) {
       console.error('获取耗材数据失败:', error)
       message.error('获取耗材数据失败')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 根据当前选中的耗材名称筛选品牌选项
+  const getFilteredBrandOptions = () => {
+    if (!selectedConsumableName) {
+      return brandOptions
+    }
+    // 筛选出与选中耗材名称一致的品牌
+    const filteredBrands = consumables
+      .filter(item => item.consumableName === selectedConsumableName)
+      .map(item => item.brand)
+      .filter(Boolean)
+    const uniqueBrands = [...new Set(filteredBrands)]
+    return uniqueBrands.map(brand => ({ value: brand, label: brand }))
+  }
+
+  // 根据当前选中的耗材名称筛选型号规格选项
+  const getFilteredModelSpecOptions = () => {
+    if (!selectedConsumableName) {
+      return modelSpecOptions
+    }
+    // 筛选出与选中耗材名称一致的型号规格
+    const filteredSpecs = consumables
+      .filter(item => item.consumableName === selectedConsumableName)
+      .map(item => item.modelSpec)
+      .filter(Boolean)
+    const uniqueSpecs = [...new Set(filteredSpecs)]
+    return uniqueSpecs.map(spec => ({ value: spec, label: spec }))
+  }
+
+  // 检查耗材是否已存在（根据名称、品牌、型号规格）
+  const checkExistingConsumable = (consumableName, brand, modelSpec) => {
+    if (!consumableName || !brand || !modelSpec) {
+      setIsExistingConsumable(false)
+      return
+    }
+    const existing = consumables.some(item => 
+      item.consumableName === consumableName && 
+      item.brand === brand && 
+      item.modelSpec === modelSpec
+    )
+    setIsExistingConsumable(existing)
+    if (existing) {
+      // 如果已存在，自动填充该耗材的编码
+      const existingItem = consumables.find(item => 
+        item.consumableName === consumableName && 
+        item.brand === brand && 
+        item.modelSpec === modelSpec
+      )
+      if (existingItem) {
+        form.setFieldsValue({
+          consumableCode: existingItem.consumableCode || '',
+          remainingQuantity: existingItem.remainingQuantity || 0
+        })
+      }
     }
   }
 
@@ -99,6 +212,71 @@ const ConsumableManagement = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields()
+      
+      // 处理新增耗材时的数量计算
+      if (!editingConsumable) {
+        // 新增模式：计算新的剩余数量
+        const addQuantity = values.addQuantity || 0
+        const currentRemaining = values.remainingQuantity || 0
+        const newRemaining = currentRemaining + addQuantity
+        
+        // 设置计算后的数量字段
+        values.quantity = newRemaining
+        values.remainingQuantity = newRemaining
+        values.usedQuantity = 0
+        
+        // 删除新增数量字段（后端不需要）
+        delete values.addQuantity
+        
+        // 添加图片数据
+        if (formImages.length > 0) {
+          values.images = JSON.stringify(formImages)
+        }
+        
+        // 如果耗材已存在（名称、品牌、型号规格一致），则更新现有耗材
+        if (isExistingConsumable) {
+          const existingItem = consumables.find(item => 
+            item.consumableName === values.consumableName && 
+            item.brand === values.brand && 
+            item.modelSpec === values.modelSpec
+          )
+          
+          if (existingItem) {
+            // 更新现有耗材的剩余数量
+            const updatedValues = {
+              ...existingItem,
+              remainingQuantity: newRemaining,
+              quantity: newRemaining,
+              // 更新其他可编辑字段
+              unit: values.unit,
+              company: values.company,
+              location: values.location,
+              images: values.images || existingItem.images,
+              remark: values.remark
+            }
+            
+            const response = await fetch(`/api/consumables/${existingItem.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updatedValues)
+            })
+            
+            if (response.ok) {
+              message.success('已更新现有耗材的剩余数量')
+              setModalVisible(false)
+              form.resetFields()
+              setEditingConsumable(null)
+              setFormImages([])
+              setIsExistingConsumable(false)
+              fetchConsumables()
+            } else {
+              message.error('更新失败')
+            }
+            return
+          }
+        }
+      }
+      
       const url = editingConsumable 
         ? `/api/consumables/${editingConsumable.id}`
         : '/api/consumables'
@@ -115,6 +293,8 @@ const ConsumableManagement = () => {
         setModalVisible(false)
         form.resetFields()
         setEditingConsumable(null)
+        setFormImages([])
+        setIsExistingConsumable(false)
         fetchConsumables()
       } else {
         message.error('操作失败')
@@ -127,6 +307,17 @@ const ConsumableManagement = () => {
   const handleEdit = (record) => {
     setEditingConsumable(record)
     form.setFieldsValue(record)
+    // 加载已有图片
+    if (record.images) {
+      try {
+        const images = JSON.parse(record.images)
+        setFormImages(images)
+      } catch (e) {
+        setFormImages([])
+      }
+    } else {
+      setFormImages([])
+    }
     setModalVisible(true)
   }
 
@@ -234,6 +425,18 @@ const ConsumableManagement = () => {
       }
     },
     {
+      title: '所属公司',
+      dataIndex: 'company',
+      key: 'company',
+      width: 120
+    },
+    {
+      title: '所在仓库',
+      dataIndex: 'location',
+      key: 'location',
+      width: 100
+    },
+    {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
@@ -283,6 +486,12 @@ const ConsumableManagement = () => {
               <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                 setEditingConsumable(null)
                 form.resetFields()
+                setFormImages([])
+                setSelectedConsumableName('')
+                setIsExistingConsumable(false)
+                // 自动填充序号为耗材总数+1
+                const nextSeq = consumables.length + 1
+                form.setFieldsValue({ seqNo: nextSeq })
                 setModalVisible(true)
               }}>
                 添加耗材
@@ -342,54 +551,277 @@ const ConsumableManagement = () => {
           setModalVisible(false)
           form.resetFields()
           setEditingConsumable(null)
+          setFormImages([])
         }}
-        width={700}
+        width={1200}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <Form.Item label="序号" name="seqNo">
-              <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入序号" />
-            </Form.Item>
-            
-            <Form.Item
-              label="耗材名称"
-              name="consumableName"
-              rules={[{ required: true, message: '请输入耗材名称' }]}
-            >
-              <Input placeholder="请输入耗材名称" />
-            </Form.Item>
-            
-            <Form.Item label="耗材编码" name="consumableCode">
-              <Input placeholder="请输入耗材编码" />
-            </Form.Item>
-            
-            <Form.Item label="品牌" name="brand">
-              <Input placeholder="请输入品牌" />
-            </Form.Item>
-            
-            <Form.Item label="型号规格" name="modelSpec">
-              <Input placeholder="请输入型号规格" />
-            </Form.Item>
-            
-            <Form.Item label="原始总数" name="originalQuantity">
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入原始总数" />
-            </Form.Item>
-            
-            <Form.Item label="已使用数" name="usedQuantity">
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入已使用数" />
-            </Form.Item>
-            
-            <Form.Item label="剩余数量" name="remainingQuantity">
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入剩余数量" />
-            </Form.Item>
-            
-            <Form.Item label="单位" name="unit">
-              <Input placeholder="请输入单位" />
-            </Form.Item>
-          </div>
+          {/* 编辑模式：显示所有字段（只读和可编辑） */}
+          {editingConsumable && (
+            <>
+              {/* 只读字段区域 */}
+              <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#666' }}>基本信息（只读）</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+                  <Form.Item label="序号" name="seqNo">
+                    <Input disabled />
+                  </Form.Item>
+                  
+                  <Form.Item label="耗材名称" name="consumableName">
+                    <Input disabled />
+                  </Form.Item>
+                  
+                  <Form.Item label="耗材编码" name="consumableCode">
+                    <Input disabled />
+                  </Form.Item>
+                  
+                  <Form.Item label="已使用数" name="usedQuantity">
+                    <InputNumber style={{ width: '100%' }} disabled />
+                  </Form.Item>
+                  
+                  <Form.Item label="剩余数量" name="remainingQuantity">
+                    <InputNumber style={{ width: '100%' }} disabled />
+                  </Form.Item>
+                </div>
+              </div>
+              
+              {/* 可编辑字段区域 */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 12, color: '#666' }}>可编辑信息</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+                  <Form.Item label="品牌" name="brand">
+                    <AutoComplete
+                      placeholder="请输入或选择品牌"
+                      options={brandOptions}
+                      filterOption={(inputValue, option) =>
+                        option.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                      }
+                    >
+                      <Input placeholder="请输入或选择品牌" />
+                    </AutoComplete>
+                  </Form.Item>
+                  
+                  <Form.Item label="型号规格" name="modelSpec">
+                    <AutoComplete
+                      placeholder="请输入或选择型号规格"
+                      options={modelSpecOptions}
+                      filterOption={(inputValue, option) =>
+                        option.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                      }
+                    >
+                      <Input placeholder="请输入或选择型号规格" />
+                    </AutoComplete>
+                  </Form.Item>
+                  
+                  <Form.Item label="单位" name="unit">
+                    <AutoComplete
+                      placeholder="请输入或选择单位"
+                      options={unitOptions}
+                      filterOption={(inputValue, option) =>
+                        option.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                      }
+                    >
+                      <Input placeholder="请输入或选择单位" />
+                    </AutoComplete>
+                  </Form.Item>
+                  
+                  <Form.Item label="所属公司" name="company">
+                    <Select placeholder="请选择所属公司" allowClear>
+                      {companies.map(company => (
+                        <Select.Option key={company.id} value={company.name}>{company.name}</Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  
+                  <Form.Item label="所在仓库" name="location">
+                    <Select placeholder="请选择所在仓库" allowClear>
+                      {warehouses.map(warehouse => (
+                        <Select.Option key={warehouse.id} value={warehouse.name}>{warehouse.name}</Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </div>
+              </div>
+            </>
+          )}
           
-          <Form.Item label="图片URL" name="imageUrl">
-            <Input placeholder="请输入图片URL" />
+          {/* 添加模式：显示添加表单 */}
+          {!editingConsumable && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+              <Form.Item label="序号" name="seqNo">
+                <Input 
+                  disabled 
+                  placeholder="自动填充" 
+                />
+              </Form.Item>
+              
+              <Form.Item
+                label="耗材名称"
+                name="consumableName"
+                rules={[{ required: true, message: '请输入耗材名称' }]}
+              >
+                <AutoComplete
+                  placeholder="请输入或选择耗材名称"
+                  options={consumableOptions}
+                  onSelect={(value, option) => {
+                    // 选择已有耗材时自动填充
+                    if (option.data && !editingConsumable) {
+                      setSelectedConsumableName(value)
+                      form.setFieldsValue({
+                        consumableCode: option.data.consumableCode || '',
+                        remainingQuantity: option.data.remainingQuantity || 0,
+                        brand: option.data.brand || '',
+                        modelSpec: option.data.modelSpec || '',
+                        unit: option.data.unit || ''
+                      })
+                      // 检查是否完全匹配（名称、品牌、型号规格）
+                      checkExistingConsumable(value, option.data.brand, option.data.modelSpec)
+                    }
+                  }}
+                  onChange={(value) => {
+                    setSelectedConsumableName(value)
+                    const currentBrand = form.getFieldValue('brand') || ''
+                    const currentModelSpec = form.getFieldValue('modelSpec') || ''
+                    checkExistingConsumable(value, currentBrand, currentModelSpec)
+                  }}
+                  filterOption={(inputValue, option) =>
+                    option.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                >
+                  <Input placeholder="请输入或选择耗材名称" />
+                </AutoComplete>
+              </Form.Item>
+              
+              <Form.Item label="耗材编码" name="consumableCode">
+                <Input 
+                  disabled={isExistingConsumable}
+                  placeholder={isExistingConsumable ? "已有耗材，不新增编码" : "请输入耗材编码"}
+                />
+              </Form.Item>
+              
+              <Form.Item label="新增数量" name="addQuantity">
+                <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入新增数量" />
+              </Form.Item>
+              
+              <Form.Item label="剩余数量" name="remainingQuantity">
+                <InputNumber 
+                  min={0} 
+                  style={{ width: '100%' }} 
+                  placeholder="自动填充" 
+                  disabled
+                />
+              </Form.Item>
+              
+              <Form.Item label="品牌" name="brand">
+                <AutoComplete
+                  placeholder="请输入或选择品牌"
+                  options={getFilteredBrandOptions()}
+                  onChange={(value) => {
+                    const currentConsumableName = form.getFieldValue('consumableName') || ''
+                    const currentModelSpec = form.getFieldValue('modelSpec') || ''
+                    checkExistingConsumable(currentConsumableName, value, currentModelSpec)
+                  }}
+                  filterOption={(inputValue, option) =>
+                    option.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                >
+                  <Input placeholder="请输入或选择品牌" />
+                </AutoComplete>
+              </Form.Item>
+              
+              <Form.Item label="型号规格" name="modelSpec">
+                <AutoComplete
+                  placeholder="请输入或选择型号规格"
+                  options={getFilteredModelSpecOptions()}
+                  onChange={(value) => {
+                    const currentConsumableName = form.getFieldValue('consumableName') || ''
+                    const currentBrand = form.getFieldValue('brand') || ''
+                    checkExistingConsumable(currentConsumableName, currentBrand, value)
+                  }}
+                  filterOption={(inputValue, option) =>
+                    option.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                >
+                  <Input placeholder="请输入或选择型号规格" />
+                </AutoComplete>
+              </Form.Item>
+              
+              <Form.Item label="单位" name="unit">
+                <AutoComplete
+                  placeholder="请输入或选择单位"
+                  options={unitOptions}
+                  filterOption={(inputValue, option) =>
+                    option.value.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+                  }
+                >
+                  <Input placeholder="请输入或选择单位" />
+                </AutoComplete>
+              </Form.Item>
+              
+              <Form.Item label="所属公司" name="company">
+                <Select placeholder="请选择所属公司" allowClear>
+                  {companies.map(company => (
+                    <Select.Option key={company.id} value={company.name}>{company.name}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              
+              <Form.Item label="所在仓库" name="location">
+                <Select placeholder="请选择所在仓库" allowClear>
+                  {warehouses.map(warehouse => (
+                    <Select.Option key={warehouse.id} value={warehouse.name}>{warehouse.name}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </div>
+          )}
+          
+          <Form.Item label="耗材图片" style={{ gridColumn: 'span 5' }}>
+            <div>
+              <Upload
+                accept="image/*"
+                multiple
+                showUploadList={false}
+                beforeUpload={(file) => {
+                  const reader = new FileReader()
+                  reader.onload = (e) => {
+                    const base64 = e.target.result
+                    setFormImages(prev => [...prev, base64])
+                    message.success(`${file.name} 已添加`)
+                  }
+                  reader.readAsDataURL(file)
+                  return false
+                }}
+              >
+                <Button icon={<UploadOutlined />}>选择图片</Button>
+              </Upload>
+              
+              {formImages.length > 0 && (
+                <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {formImages.map((img, index) => (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <img 
+                        src={img} 
+                        alt={`图片${index + 1}`} 
+                        style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4 }}
+                      />
+                      <Button
+                        type="primary"
+                        danger
+                        size="small"
+                        style={{ position: 'absolute', top: 0, right: 0, padding: '0 4px', minWidth: 'auto' }}
+                        onClick={() => {
+                          setFormImages(prev => prev.filter((_, i) => i !== index))
+                        }}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </Form.Item>
           
           <Form.Item label="备注" name="remark">

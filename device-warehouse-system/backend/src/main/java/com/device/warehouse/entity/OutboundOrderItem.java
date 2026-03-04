@@ -30,8 +30,16 @@ public class OutboundOrderItem {
     @JoinColumn(name = "consumable_id")
     private Consumable consumable;
 
+    @ManyToOne
+    @JoinColumn(name = "accessory_id")
+    private Accessory accessory;
+
+    @ManyToOne
+    @JoinColumn(name = "material_id")
+    private Material material;
+
     @Column(name = "item_type", length = 20)
-    private String itemType; // device, consumable
+    private String itemType; // device, consumable, material
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;

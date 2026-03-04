@@ -282,7 +282,7 @@ function LocationManagement() {
 
   return (
     <div>
-      <h2 className="page-title">位置管理</h2>
+      <h2 className="page-title">库房管理</h2>
       
       <Tabs
         activeKey={activeTab}

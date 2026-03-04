@@ -44,6 +44,7 @@ public class OutboundOrderController {
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> requestData) {
         try {
             System.out.println("创建出库单: " + requestData.get("orderCode"));
+            System.out.println("请求数据: " + requestData);
             
             // 构建出库单对象
             OutboundOrder order = new OutboundOrder();
@@ -90,17 +91,14 @@ public class OutboundOrderController {
             order.setRecipientName((String) requestData.get("recipientName"));
             order.setEventName((String) requestData.get("eventName"));
             order.setUsageLocation((String) requestData.get("usageLocation"));
-            if (requestData.get("eventDate") != null) {
-                try {
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                    order.setEventDate(sdf.parse((String) requestData.get("eventDate")));
-                } catch (Exception e) {
-                    System.out.println("解析比赛时间失败: " + e.getMessage());
-                }
-            }
+            // 比赛时间为文本类型，直接存储
+            order.setEventDate((String) requestData.get("eventDate"));
             
             // 设置运输方式
             order.setTransportMethod((String) requestData.get("transportMethod"));
+            
+            // 设置出库单类型
+            order.setOrderType((String) requestData.get("orderType"));
             
             // 设置图片URLs
             if (requestData.get("images") instanceof List) {

@@ -29,11 +29,17 @@ public class ConsumableService {
         if (existingConsumable != null) {
             existingConsumable.setSeqNo(consumable.getSeqNo());
             existingConsumable.setConsumableName(consumable.getConsumableName());
+            existingConsumable.setConsumableCode(consumable.getConsumableCode());
             existingConsumable.setBrand(consumable.getBrand());
             existingConsumable.setModelSpec(consumable.getModelSpec());
             existingConsumable.setQuantity(consumable.getQuantity());
+            existingConsumable.setRemainingQuantity(consumable.getRemainingQuantity());
+            existingConsumable.setUsedQuantity(consumable.getUsedQuantity());
             existingConsumable.setUnit(consumable.getUnit());
+            existingConsumable.setCompany(consumable.getCompany());
+            existingConsumable.setLocation(consumable.getLocation());
             existingConsumable.setImageUrl(consumable.getImageUrl());
+            existingConsumable.setImages(consumable.getImages());
             existingConsumable.setRemark(consumable.getRemark());
             return consumableRepository.save(existingConsumable);
         }

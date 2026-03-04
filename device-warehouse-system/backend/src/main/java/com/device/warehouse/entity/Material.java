@@ -51,6 +51,9 @@ public class Material {
     @Column(name = "storage_location", length = 100)
     private String storageLocation;
 
+    @Column(name = "company", length = 100)
+    private String company;
+
     @Column(name = "status", length = 20)
     private String status;
 

@@ -415,6 +415,8 @@ function InventoryManagement() {
 
   return (
     <div style={{ padding: '24px' }}>
+      <h2 className="page-title">库存管理</h2>
+      
       {/* 预警提示 */}
       {warningList.length > 0 && (
         <Alert

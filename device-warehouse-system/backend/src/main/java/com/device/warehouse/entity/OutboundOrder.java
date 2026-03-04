@@ -94,15 +94,18 @@ public class OutboundOrder {
     @Column(name = "usage_location", length = 100)
     private String usageLocation;
 
-    @Column(name = "event_date")
-    @Temporal(TemporalType.DATE)
-    private Date eventDate;
+    @Column(name = "event_date", length = 100)
+    private String eventDate;
 
-    @Column(name = "images", columnDefinition = "TEXT")
+    @Column(name = "images", columnDefinition = "LONGTEXT")
     private String images;
 
     @Column(name = "transport_method", length = 50)
     private String transportMethod;
+
+    // 新增字段 - 出库单类型
+    @Column(name = "order_type", length = 50)
+    private String orderType; // PROJECT_OUTBOUND, MATERIAL_OUTBOUND
 
     @PrePersist
     protected void onCreate() {

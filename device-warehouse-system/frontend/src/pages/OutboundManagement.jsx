@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Card, Table, Button, Modal, Form, Input, Select, DatePicker, message, Space, Tag, Popconfirm, Row, Col, Divider, InputNumber, Descriptions, List, Upload } from 'antd'
+import React, { useState, useEffect, useRef } from 'react'
+import { Card, Table, Button, Modal, Form, Input, Select, DatePicker, message, Space, Tag, Popconfirm, Row, Col, Divider, InputNumber, Descriptions, List, Upload, Image } from 'antd'
 import { CheckOutlined, CloseOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, PrinterOutlined, SearchOutlined, DoubleRightOutlined, PlusCircleOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -26,6 +26,7 @@ function OutboundManagement() {
   const [devicePagination, setDevicePagination] = useState({ current: 1, pageSize: 10 })
   const [deviceDetailVisible, setDeviceDetailVisible] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState(null)
+  const processingFilesRef = useRef(new Set()) // 跟踪正在处理的文件
 
   useEffect(() => {
     const userStr = localStorage.getItem('user')
@@ -60,15 +61,14 @@ function OutboundManagement() {
     }
   }
 
-  // 获取所有类型的未使用设备列表
+  // 获取所有类型的未使用设备列表（项目出库 - 不包含物料）
   const fetchDevices = async () => {
     try {
-      // 同时获取所有类型的设备
-      const [devicesRes, accessoriesRes, consumablesRes, materialsRes] = await Promise.all([
+      // 同时获取所有类型的设备（项目出库不包含物料）
+      const [devicesRes, accessoriesRes, consumablesRes] = await Promise.all([
         fetch('/api/devices').then(res => res.json()).catch(() => []),
         fetch('/api/accessories').then(res => res.json()).catch(() => []),
-        fetch('/api/consumables').then(res => res.json()).catch(() => []),
-        fetch('/api/materials').then(res => res.json()).catch(() => [])
+        fetch('/api/consumables').then(res => res.json()).catch(() => [])
       ])
 
       // 为每种设备类型添加类型标识，并筛选可用的设备
@@ -110,26 +110,12 @@ function OutboundManagement() {
           model: c.modelSpec,
           specification: c.modelSpec
         }))
-      
-      // 物料：筛选状态为在库的
-      const materialsWithType = materialsRes
-        .filter(m => m.status === '在库')
-        .map(m => ({ 
-          ...m, 
-          itemType: '物料',
-          deviceName: m.materialName,
-          deviceCode: m.materialCode,
-          brand: '',
-          model: '',
-          specification: m.specification
-        }))
 
-      // 合并所有可用的设备
+      // 合并所有可用的设备（项目出库不包含物料）
       const allItems = [
         ...devicesWithType,
         ...accessoriesWithType,
-        ...consumablesWithType,
-        ...materialsWithType
+        ...consumablesWithType
       ]
 
       setAllDevices(allItems)
@@ -253,27 +239,34 @@ function OutboundManagement() {
     const newItems = [...items, newItem]
     setItems(newItems)
     
-    // 从右侧设备列表中移除已选择的设备
-    // 同时考虑当前搜索条件和类型筛选
-    const selectedDeviceIds = newItems.map(item => item.deviceId)
-    let filtered = allDevices.filter(d => !selectedDeviceIds.includes(d.id))
+    // 只有耗材(consumable)保留在右侧列表中，方便多次添加和修改数量
+    // 专用设备(device)、通用设备(accessory)、物料(material)从右侧移除
+    const isConsumable = device.itemType === '耗材'
     
-    // 应用类型筛选
-    if (selectedType && selectedType !== '') {
-      filtered = filtered.filter(d => d.itemType === selectedType)
+    if (!isConsumable) {
+      // 从右侧设备列表中移除已选择的设备（非耗材）
+      // 同时考虑当前搜索条件和类型筛选
+      const selectedDeviceIds = newItems.map(item => item.deviceId)
+      let filtered = allDevices.filter(d => !selectedDeviceIds.includes(d.id))
+      
+      // 应用类型筛选
+      if (selectedType && selectedType !== '') {
+        filtered = filtered.filter(d => d.itemType === selectedType)
+      }
+      
+      // 应用搜索文本筛选
+      if (searchText && searchText.trim() !== '') {
+        filtered = filtered.filter(d => 
+          d.deviceName?.toLowerCase().includes(searchText.toLowerCase()) ||
+          d.deviceCode?.toLowerCase().includes(searchText.toLowerCase()) ||
+          d.brand?.toLowerCase().includes(searchText.toLowerCase()) ||
+          d.model?.toLowerCase().includes(searchText.toLowerCase())
+        )
+      }
+      
+      setDevices(filtered)
     }
     
-    // 应用搜索文本筛选
-    if (searchText && searchText.trim() !== '') {
-      filtered = filtered.filter(d => 
-        d.deviceName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        d.deviceCode?.toLowerCase().includes(searchText.toLowerCase()) ||
-        d.brand?.toLowerCase().includes(searchText.toLowerCase()) ||
-        d.model?.toLowerCase().includes(searchText.toLowerCase())
-      )
-    }
-    
-    setDevices(filtered)
     message.success(`已添加设备：${device.deviceName}`)
   }
 
@@ -362,13 +355,13 @@ function OutboundManagement() {
         contactPhone: values.contactPhone,
         eventName: values.eventName,
         usageLocation: values.usageLocation,
-        eventDate: values.eventDate ? values.eventDate.format('YYYY-MM-DD') : null,
+        eventDate: values.eventDate || null,
         returnDate: values.returnDate ? values.returnDate.format('YYYY-MM-DD') : null,
         transportMethod: values.transportMethod,
         images: images,
         items: items.map(item => ({
           deviceId: item.deviceId,
-          itemType: item.itemType === '耗材' ? 'consumable' : 'device',
+          itemType: item.itemType === '耗材' ? 'consumable' : item.itemType === '物料' ? 'material' : item.itemType === '通用设备' ? 'accessory' : 'device',
           quantity: item.quantity,
           unit: item.unit,
           remark: item.remark,
@@ -384,7 +377,12 @@ function OutboundManagement() {
         body: JSON.stringify(orderData)
       })
       
+      console.log('响应状态:', response.status)
+      console.log('响应头:', response.headers)
+      
       const data = await response.json()
+      
+      console.log('响应数据:', data)
       
       if (data.success) {
         message.success('出库单创建成功')
@@ -395,11 +393,12 @@ function OutboundManagement() {
         fetchOrders()
         fetchDevices()
       } else {
+        console.error('创建失败，错误信息:', data.message)
         message.error(data.message || '创建失败')
       }
     } catch (error) {
       console.error('创建出库单失败:', error)
-      message.error('创建失败')
+      message.error('创建失败: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -628,7 +627,9 @@ function OutboundManagement() {
       render: (itemType) => {
         const typeMap = {
           'device': '专用设备',
-          'consumable': '耗材'
+          'consumable': '耗材',
+          'accessory': '通用设备',
+          'material': '物料'
         }
         return typeMap[itemType] || itemType || '-'
       }
@@ -639,6 +640,8 @@ function OutboundManagement() {
       render: (_, record) => {
         if (record.itemType === 'consumable' && record.consumable) {
           return record.consumable.consumableName || '-'
+        } else if (record.itemType === 'accessory' && record.accessory) {
+          return record.accessory.accessoryName || '-'
         }
         return record.device?.deviceName || '-'
       }
@@ -650,6 +653,8 @@ function OutboundManagement() {
       render: (_, record) => {
         if (record.itemType === 'consumable' && record.consumable) {
           return record.consumable.consumableCode || '-'
+        } else if (record.itemType === 'accessory' && record.accessory) {
+          return record.accessory.accessoryCode || record.accessory.snCode || '-'
         }
         return record.device?.deviceCode || record.device?.snCode || '-'
       }
@@ -661,6 +666,8 @@ function OutboundManagement() {
       render: (_, record) => {
         if (record.itemType === 'consumable' && record.consumable) {
           return record.consumable.brand || '-'
+        } else if (record.itemType === 'accessory' && record.accessory) {
+          return record.accessory.brand || '-'
         }
         return record.device?.brand || '-'
       }
@@ -672,6 +679,8 @@ function OutboundManagement() {
       render: (_, record) => {
         if (record.itemType === 'consumable' && record.consumable) {
           return record.consumable.modelSpec || '-'
+        } else if (record.itemType === 'accessory' && record.accessory) {
+          return record.accessory.modelSpec || '-'
         }
         return record.device?.modelSpec || '-'
       }
@@ -683,6 +692,8 @@ function OutboundManagement() {
       render: (_, record) => {
         if (record.itemType === 'consumable' && record.consumable) {
           return record.consumable.location || '-'
+        } else if (record.itemType === 'accessory' && record.accessory) {
+          return record.accessory.location || '-'
         }
         return record.device?.location || '-'
       }
@@ -1076,25 +1087,41 @@ function OutboundManagement() {
                   }))}
                   beforeUpload={(file, fileList) => {
                     // 计算剩余可上传数量
-                    const remainingCount = 5 - images.length
+                    const remainingCount = 10 - images.length
                     if (remainingCount <= 0) {
-                      message.error('最多只能上传5张图片')
+                      message.error('最多只能上传10张图片')
                       return false
                     }
                     
                     // 只处理剩余数量的文件
                     const filesToProcess = fileList.slice(0, remainingCount)
-                    filesToProcess.forEach(file => {
+                    
+                    // 处理每个文件
+                    filesToProcess.forEach((file) => {
+                      // 使用文件名和大小作为唯一标识
+                      const fileId = `${file.name}_${file.size}_${file.lastModified}`
+                      
+                      // 检查是否已经在处理中
+                      if (processingFilesRef.current.has(fileId)) {
+                        return
+                      }
+                      
+                      // 标记为正在处理
+                      processingFilesRef.current.add(fileId)
+                      
                       const reader = new FileReader()
                       reader.readAsDataURL(file)
                       reader.onload = () => {
-                        setImages(prevImages => [...prevImages, reader.result])
+                        setImages(prev => {
+                          if (prev.length < 10) {
+                            return [...prev, reader.result]
+                          }
+                          return prev
+                        })
+                        // 处理完成后移除标记
+                        processingFilesRef.current.delete(fileId)
                       }
                     })
-                    
-                    if (fileList.length > remainingCount) {
-                      message.info(`已选择 ${fileList.length} 张图片，只上传前 ${remainingCount} 张`)
-                    }
                     
                     return false
                   }}
@@ -1102,9 +1129,9 @@ function OutboundManagement() {
                     const index = parseInt(file.uid)
                     setImages(images.filter((_, i) => i !== index))
                   }}
-                  maxCount={5} // 限制最多上传5张图片
+                  maxCount={10} // 限制最多上传10张图片
                 >
-                  {images.length < 5 && <PlusCircleOutlined />}
+                  {images.length < 10 && <PlusCircleOutlined />}
                 </Upload>
               </Form.Item>
             </Col>
@@ -1160,7 +1187,6 @@ function OutboundManagement() {
                         <Option value="专用设备">专用设备</Option>
                         <Option value="通用设备">通用设备</Option>
                         <Option value="耗材">耗材</Option>
-                        <Option value="物料">物料</Option>
                       </Select>
                     </Col>
                     <Col span={16}>
@@ -1276,7 +1302,7 @@ function OutboundManagement() {
               <Descriptions.Item label="赛事全称">{currentOrder.eventName || '-'}</Descriptions.Item>
               <Descriptions.Item label="使用地">{currentOrder.usageLocation || '-'}</Descriptions.Item>
               <Descriptions.Item label="运输方式">{currentOrder.transportMethod || '-'}</Descriptions.Item>
-              <Descriptions.Item label="比赛时间">{currentOrder.eventDate ? dayjs(currentOrder.eventDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
+              <Descriptions.Item label="比赛时间">{currentOrder.eventDate || '-'}</Descriptions.Item>
               <Descriptions.Item label="预计归还日期">{currentOrder.returnDate ? dayjs(currentOrder.returnDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
             </Descriptions>
 
@@ -1290,6 +1316,38 @@ function OutboundManagement() {
               size="small"
               bordered
             />
+
+            {/* 图片展示 */}
+            {currentOrder.images && currentOrder.images.length > 0 && (
+              <>
+                <Divider orientation="left">相关图片</Divider>
+                <div style={{ marginTop: 16 }}>
+                  <Image.PreviewGroup>
+                    <Space wrap>
+                      {(() => {
+                        try {
+                          const imageList = typeof currentOrder.images === 'string' 
+                            ? JSON.parse(currentOrder.images) 
+                            : currentOrder.images;
+                          return imageList.map((img, index) => (
+                            <Image
+                              key={index}
+                              src={img}
+                              alt={`图片${index + 1}`}
+                              style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 4 }}
+                              preview={{ mask: '点击查看' }}
+                            />
+                          ));
+                        } catch (e) {
+                          console.error('解析图片数据失败:', e);
+                          return <span>图片加载失败</span>;
+                        }
+                      })()}
+                    </Space>
+                  </Image.PreviewGroup>
+                </div>
+              </>
+            )}
 
             {/* 备注 */}
             <div style={{ marginTop: 16 }}>

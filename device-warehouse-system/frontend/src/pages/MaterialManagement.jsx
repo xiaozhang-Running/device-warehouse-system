@@ -145,6 +145,7 @@ function MaterialManagement() {
     { title: '最大库存', dataIndex: 'maxQuantity', key: 'maxQuantity', width: 100 },
     { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
     { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120 },
+    { title: '所属公司', dataIndex: 'company', key: 'company', width: 120 },
     { title: '存放位置', dataIndex: 'storageLocation', key: 'storageLocation', width: 120 },
     { title: '状态', dataIndex: 'status', key: 'status', width: 80, render: (status) => getStatusTag(status) },
     { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true, width: 150 },
@@ -262,6 +263,9 @@ function MaterialManagement() {
             </Form.Item>
             <Form.Item name="supplier" label="供应商">
               <Input placeholder="请输入供应商" />
+            </Form.Item>
+            <Form.Item name="company" label="所属公司">
+              <Input placeholder="请输入所属公司" />
             </Form.Item>
             <Form.Item name="storageLocation" label="存放位置">
               <Input placeholder="请输入存放位置" />

@@ -21,6 +21,8 @@ const DeviceManagement = () => {
   const [currentUser, setCurrentUser] = useState(null)
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
   const [isExistingDevice, setIsExistingDevice] = useState(false)
+  const [companies, setCompanies] = useState([])
+  const [warehouses, setWarehouses] = useState([])
 
   const handleFilterSubmit = async (values) => {
     setFilters(values)
@@ -39,7 +41,35 @@ const DeviceManagement = () => {
       setCurrentUser(JSON.parse(userStr))
     }
     fetchDevices()
+    fetchCompanies()
+    fetchWarehouses()
   }, [])
+
+  // 获取公司列表
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('/api/companies')
+      if (response.ok) {
+        const data = await response.json()
+        setCompanies(data)
+      }
+    } catch (error) {
+      console.error('获取公司列表失败:', error)
+    }
+  }
+
+  // 获取仓库列表
+  const fetchWarehouses = async () => {
+    try {
+      const response = await fetch('/api/warehouses')
+      if (response.ok) {
+        const data = await response.json()
+        setWarehouses(data)
+      }
+    } catch (error) {
+      console.error('获取仓库列表失败:', error)
+    }
+  }
 
   const fetchDevices = async (filterParams = {}) => {
     setLoading(true)
@@ -420,6 +450,18 @@ const DeviceManagement = () => {
       }
     },
     {
+      title: '所属公司',
+      dataIndex: 'company',
+      key: 'company',
+      width: 120
+    },
+    {
+      title: '所在仓库',
+      dataIndex: 'location',
+      key: 'location',
+      width: 100
+    },
+    {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
@@ -491,7 +533,7 @@ const DeviceManagement = () => {
                 form.setFieldsValue({ displaySeq: nextSeq })
                 setModalVisible(true)
               }}>
-                添加设备
+                添加专用设备
               </Button>
             </Space>
           </div>
@@ -561,7 +603,7 @@ const DeviceManagement = () => {
       </Card>
 
       <Modal
-        title={editingDevice ? '编辑设备' : '添加设备'}
+        title={editingDevice ? '编辑设备' : '添加专用设备'}
         open={modalVisible}
         onOk={handleModalOk}
         onCancel={() => {
@@ -652,11 +694,19 @@ const DeviceManagement = () => {
             </Form.Item>
             
             <Form.Item label="所属公司" name="company">
-              <Input placeholder="请输入所属公司" />
+              <Select placeholder="请选择所属公司" allowClear>
+                {companies.map(company => (
+                  <Select.Option key={company.id} value={company.name}>{company.name}</Select.Option>
+                ))}
+              </Select>
             </Form.Item>
             
-            <Form.Item label="所在位置" name="location">
-              <Input placeholder="请输入所在位置" />
+            <Form.Item label="所在仓库" name="location">
+              <Select placeholder="请选择所在仓库" allowClear>
+                {warehouses.map(warehouse => (
+                  <Select.Option key={warehouse.id} value={warehouse.name}>{warehouse.name}</Select.Option>
+                ))}
+              </Select>
             </Form.Item>
           </div>
           
