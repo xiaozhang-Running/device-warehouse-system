@@ -1,15 +1,8 @@
 package com.device.warehouse.entity;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "inventory")
 public class Inventory {
@@ -77,5 +70,160 @@ public class Inventory {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // Default constructor
+    public Inventory() {}
+
+    // All args constructor
+    public Inventory(Long id, Long deviceId, String deviceName, String deviceCode, 
+                    Long warehouseId, String warehouseName, Integer quantity, String unit, 
+                    Integer minQuantity, Integer maxQuantity, String status, String remark, 
+                    LocalDateTime createdAt, LocalDateTime updatedAt, String createdBy, String updatedBy) {
+        this.id = id;
+        this.deviceId = deviceId;
+        this.deviceName = deviceName;
+        this.deviceCode = deviceCode;
+        this.warehouseId = warehouseId;
+        this.warehouseName = warehouseName;
+        this.quantity = quantity;
+        this.unit = unit;
+        this.minQuantity = minQuantity;
+        this.maxQuantity = maxQuantity;
+        this.status = status;
+        this.remark = remark;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.createdBy = createdBy;
+        this.updatedBy = updatedBy;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(Long deviceId) {
+        this.deviceId = deviceId;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
+    }
+
+    public String getDeviceCode() {
+        return deviceCode;
+    }
+
+    public void setDeviceCode(String deviceCode) {
+        this.deviceCode = deviceCode;
+    }
+
+    public Long getWarehouseId() {
+        return warehouseId;
+    }
+
+    public void setWarehouseId(Long warehouseId) {
+        this.warehouseId = warehouseId;
+    }
+
+    public String getWarehouseName() {
+        return warehouseName;
+    }
+
+    public void setWarehouseName(String warehouseName) {
+        this.warehouseName = warehouseName;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public Integer getMinQuantity() {
+        return minQuantity;
+    }
+
+    public void setMinQuantity(Integer minQuantity) {
+        this.minQuantity = minQuantity;
+    }
+
+    public Integer getMaxQuantity() {
+        return maxQuantity;
+    }
+
+    public void setMaxQuantity(Integer maxQuantity) {
+        this.maxQuantity = maxQuantity;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

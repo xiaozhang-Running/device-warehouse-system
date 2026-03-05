@@ -46,6 +46,18 @@ public class OutboundOrderController {
             System.out.println("创建出库单: " + requestData.get("orderCode"));
             System.out.println("请求数据: " + requestData);
             
+            // 检查赛事名称是否重复
+            String eventName = (String) requestData.get("eventName");
+            if (eventName != null && !eventName.trim().isEmpty()) {
+                List<OutboundOrder> existingOrders = outboundOrderService.findByEventName(eventName.trim());
+                if (!existingOrders.isEmpty()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", false);
+                    response.put("message", "赛事名称已存在，请使用不同的赛事名称");
+                    return ResponseEntity.status(400).body(response);
+                }
+            }
+            
             // 构建出库单对象
             OutboundOrder order = new OutboundOrder();
             order.setOrderCode((String) requestData.get("orderCode"));
@@ -382,6 +394,33 @@ public class OutboundOrderController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "清空失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<?> transferDevice(@RequestBody Map<String, Object> requestData) {
+        try {
+            System.out.println("流转设备: " + requestData);
+            
+            Long sourceOutboundId = Long.valueOf(requestData.get("sourceOutboundId").toString());
+            Long targetOutboundId = Long.valueOf(requestData.get("targetOutboundId").toString());
+            Long deviceId = Long.valueOf(requestData.get("deviceId").toString());
+            String itemType = (String) requestData.get("itemType");
+            String remark = (String) requestData.get("remark");
+            
+            outboundOrderService.transferDevice(sourceOutboundId, targetOutboundId, deviceId, itemType, remark);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "设备流转成功");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("设备流转失败: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "流转失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }

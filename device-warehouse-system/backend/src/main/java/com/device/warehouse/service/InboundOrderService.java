@@ -39,47 +39,64 @@ public class InboundOrderService {
 
     public List<InboundOrder> getAllOrders() {
         List<InboundOrder> orders = inboundOrderRepository.findAll();
-        // 强制加载 items 和 device 数据
+        // 加载每个订单的明细
         for (InboundOrder order : orders) {
-            if (order.getItems() != null) {
-                for (InboundOrderItem item : order.getItems()) {
-                    if (item.getDevice() != null) {
-                        item.getDevice().getDeviceName(); // 触发加载
-                    }
+            List<InboundOrderItem> items = inboundOrderItemRepository.findByOrderId(order.getId());
+            // 加载每个明细项的关联设备信息
+            for (InboundOrderItem item : items) {
+                if (item.getDevice() != null) {
+                    Device device = deviceRepository.findById(item.getDevice().getId()).orElse(null);
+                    item.setDevice(device);
+                }
+                if (item.getAccessory() != null) {
+                    Accessory accessory = accessoryRepository.findById(item.getAccessory().getId()).orElse(null);
+                    item.setAccessory(accessory);
+                }
+                if (item.getConsumable() != null) {
+                    Consumable consumable = consumableRepository.findById(item.getConsumable().getId()).orElse(null);
+                    item.setConsumable(consumable);
                 }
             }
+            // 清空原有集合并添加新元素，而不是直接替换
+            order.getItems().clear();
+            order.getItems().addAll(items);
         }
         return orders;
     }
 
     public InboundOrder getOrderById(Long id) {
-        return inboundOrderRepository.findById(id).orElse(null);
+        InboundOrder order = inboundOrderRepository.findById(id).orElse(null);
+        if (order != null) {
+            List<InboundOrderItem> items = inboundOrderItemRepository.findByOrderId(id);
+            // 加载每个明细项的关联设备信息
+            for (InboundOrderItem item : items) {
+                if (item.getDevice() != null) {
+                    Device device = deviceRepository.findById(item.getDevice().getId()).orElse(null);
+                    item.setDevice(device);
+                }
+                if (item.getAccessory() != null) {
+                    Accessory accessory = accessoryRepository.findById(item.getAccessory().getId()).orElse(null);
+                    item.setAccessory(accessory);
+                }
+                if (item.getConsumable() != null) {
+                    Consumable consumable = consumableRepository.findById(item.getConsumable().getId()).orElse(null);
+                    item.setConsumable(consumable);
+                }
+            }
+            // 清空原有集合并添加新元素，而不是直接替换
+            order.getItems().clear();
+            order.getItems().addAll(items);
+        }
+        return order;
     }
 
     @Transactional
-    public InboundOrder createOrder(InboundOrder order, List<Long> deviceIds, List<Map<String, Object>> itemDetails) {
+    public InboundOrder createOrder(InboundOrder order, List<Long> deviceIds, List<Map<String, Object>> itemDetails, Map<String, String> itemRemarks, Map<String, String> itemStatuses) {
         order.setOrderDate(LocalDateTime.now());
         order.setStatus("PENDING");
         InboundOrder savedOrder = inboundOrderRepository.save(order);
         
-        // 处理归还入库 - 关联已有设备
-        if (deviceIds != null && !deviceIds.isEmpty()) {
-            for (Long deviceId : deviceIds) {
-                Device device = deviceRepository.findById(deviceId).orElse(null);
-                if (device != null) {
-                    InboundOrderItem item = new InboundOrderItem();
-                    item.setOrder(savedOrder);
-                    item.setDevice(device);
-                    item.setQuantity(1);
-                    item.setItemType("device");
-                    item.setItemName(device.getDeviceName());
-                    item.setItemCode(device.getDeviceCode());
-                    inboundOrderItemRepository.save(item);
-                }
-            }
-        }
-        
-        // 处理新采购入库 - 保存物品明细（设备在完成入库时创建）
+        // 优先处理itemDetails，因为它包含了完整的设备信息
         if (itemDetails != null && !itemDetails.isEmpty()) {
             for (Map<String, Object> detail : itemDetails) {
                 InboundOrderItem item = new InboundOrderItem();
@@ -94,10 +111,140 @@ public class InboundOrderService {
                 item.setCompany((String) detail.get("company"));
                 item.setLocationStr((String) detail.get("location"));
                 item.setOtherAccessories((String) detail.get("otherAccessories"));
-                item.setRemark((String) detail.get("remark"));
+                
+                // 设置设备状态
+                item.setItemStatus("normal");
+                
+                // 设置备注
+                if (detail.get("remark") != null) {
+                    item.setRemark((String) detail.get("remark"));
+                }
+                
+                // 尝试关联具体的设备对象
+                if (detail.get("type") != null) {
+                    String type = (String) detail.get("type");
+                    // 从detail中获取设备ID
+                    Object deviceIdObj = detail.get("deviceId");
+                    if (deviceIdObj != null) {
+                        Long deviceId = null;
+                        if (deviceIdObj instanceof Number) {
+                            deviceId = ((Number) deviceIdObj).longValue();
+                        } else {
+                            try {
+                                deviceId = Long.parseLong(deviceIdObj.toString());
+                            } catch (NumberFormatException e) {
+                                // 忽略无效的设备ID
+                            }
+                        }
+                        
+                        if (deviceId != null) {
+                            if ("device".equals(type)) {
+                                Device device = deviceRepository.findById(deviceId).orElse(null);
+                                if (device != null) {
+                                    item.setDevice(device);
+                                }
+                            } else if ("accessory".equals(type)) {
+                                Accessory accessory = accessoryRepository.findById(deviceId).orElse(null);
+                                if (accessory != null) {
+                                    item.setAccessory(accessory);
+                                }
+                            } else if ("consumable".equals(type)) {
+                                Consumable consumable = consumableRepository.findById(deviceId).orElse(null);
+                                if (consumable != null) {
+                                    item.setConsumable(consumable);
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // 保存原始明细数据，用于完成入库时创建设备
                 item.setItemDetail(detail.toString());
                 inboundOrderItemRepository.save(item);
+            }
+        }
+        // 处理deviceIds（仅当没有itemDetails时）
+        else if (deviceIds != null && !deviceIds.isEmpty()) {
+            for (Long deviceId : deviceIds) {
+                // 先尝试查找专用设备
+                Device device = deviceRepository.findById(deviceId).orElse(null);
+                if (device != null) {
+                    InboundOrderItem item = new InboundOrderItem();
+                    item.setOrder(savedOrder);
+                    item.setDevice(device);
+                    item.setQuantity(1);
+                    item.setItemType("device");
+                    item.setItemName(device.getDeviceName());
+                    item.setItemCode(device.getDeviceCode());
+                    
+                    // 设置设备状态
+                    if (itemStatuses != null && itemStatuses.containsKey(String.valueOf(deviceId))) {
+                        item.setItemStatus(itemStatuses.get(String.valueOf(deviceId)));
+                    } else {
+                        item.setItemStatus("normal");
+                    }
+                    
+                    // 设置备注
+                    if (itemRemarks != null && itemRemarks.containsKey(String.valueOf(deviceId))) {
+                        item.setRemark(itemRemarks.get(String.valueOf(deviceId)));
+                    }
+                    
+                    inboundOrderItemRepository.save(item);
+                    continue;
+                }
+                
+                // 如果不是专用设备，尝试查找通用设备
+                Accessory accessory = accessoryRepository.findById(deviceId).orElse(null);
+                if (accessory != null) {
+                    InboundOrderItem item = new InboundOrderItem();
+                    item.setOrder(savedOrder);
+                    item.setAccessory(accessory);
+                    item.setQuantity(1);
+                    item.setItemType("accessory");
+                    item.setItemName(accessory.getAccessoryName());
+                    item.setItemCode(accessory.getAccessoryCode());
+                    
+                    // 设置设备状态
+                    if (itemStatuses != null && itemStatuses.containsKey(String.valueOf(deviceId))) {
+                        item.setItemStatus(itemStatuses.get(String.valueOf(deviceId)));
+                    } else {
+                        item.setItemStatus("normal");
+                    }
+                    
+                    // 设置备注
+                    if (itemRemarks != null && itemRemarks.containsKey(String.valueOf(deviceId))) {
+                        item.setRemark(itemRemarks.get(String.valueOf(deviceId)));
+                    }
+                    
+                    inboundOrderItemRepository.save(item);
+                    continue;
+                }
+                
+                // 如果不是通用设备，尝试查找耗材
+                Consumable consumable = consumableRepository.findById(deviceId).orElse(null);
+                if (consumable != null) {
+                    InboundOrderItem item = new InboundOrderItem();
+                    item.setOrder(savedOrder);
+                    item.setConsumable(consumable);
+                    item.setQuantity(1);
+                    item.setItemType("consumable");
+                    item.setItemName(consumable.getConsumableName());
+                    item.setItemCode(consumable.getConsumableCode());
+                    
+                    // 设置设备状态
+                    if (itemStatuses != null && itemStatuses.containsKey(String.valueOf(deviceId))) {
+                        item.setItemStatus(itemStatuses.get(String.valueOf(deviceId)));
+                    } else {
+                        item.setItemStatus("normal");
+                    }
+                    
+                    // 设置备注
+                    if (itemRemarks != null && itemRemarks.containsKey(String.valueOf(deviceId))) {
+                        item.setRemark(itemRemarks.get(String.valueOf(deviceId)));
+                    }
+                    
+                    inboundOrderItemRepository.save(item);
+                }
             }
         }
         
@@ -182,12 +329,47 @@ public class InboundOrderService {
                     }
                 } 
                 // 归还入库：更新已有设备状态
-                else if ("return".equals(order.getInboundType()) && item.getDevice() != null) {
-                    Device device = item.getDevice();
-                    device.setUsageStatus("未使用");
-                    device.setStatus("在库");
-                    deviceRepository.save(device);
-                    System.out.println("归还入库：设备 " + device.getDeviceName() + " 状态更新为: 未使用");
+                else if ("return".equals(order.getInboundType())) {
+                    // 处理专用设备归还
+                    if ("device".equals(item.getItemType()) && item.getDevice() != null) {
+                        Device device = item.getDevice();
+                        device.setUsageStatus("未使用");
+                        device.setStatus("在库");
+                        deviceRepository.save(device);
+                        System.out.println("归还入库：专用设备 " + device.getDeviceName() + " 状态更新为: 未使用");
+                    }
+                    // 处理通用设备归还
+                    else if ("accessory".equals(item.getItemType()) && item.getAccessory() != null) {
+                        Accessory accessory = item.getAccessory();
+                        accessory.setUsageStatus("未使用");
+                        accessoryRepository.save(accessory);
+                        System.out.println("归还入库：通用设备 " + accessory.getAccessoryName() + " 状态更新为: 未使用");
+                    }
+                    // 处理耗材归还 - 增加库存
+                    else if ("consumable".equals(item.getItemType()) && item.getConsumable() != null) {
+                        Consumable consumable = item.getConsumable();
+                        int inboundQuantity = item.getQuantity() != null ? item.getQuantity() : 1;
+                        
+                        // 只有当数量大于0时才更新库存
+                        if (inboundQuantity > 0) {
+                            // 获取当前各数量字段
+                            int currentRemaining = consumable.getRemainingQuantity() != null ? consumable.getRemainingQuantity() : 0;
+                            int currentQuantity = consumable.getQuantity() != null ? consumable.getQuantity() : 0;
+                            
+                            // 计算新的数量
+                            int newRemaining = currentRemaining + inboundQuantity;
+                            int newQuantity = currentQuantity + inboundQuantity;
+                            
+                            // 更新数量字段
+                            consumable.setRemainingQuantity(newRemaining);
+                            consumable.setQuantity(newQuantity);
+                            consumableRepository.save(consumable);
+                            System.out.println("归还入库：耗材 " + consumable.getConsumableName() + " 已归还，库存增加: " + inboundQuantity + "，当前库存: " + newQuantity);
+                        } else {
+                            // 数量为0，视为全部损耗，不更新库存
+                            System.out.println("归还入库：耗材 " + consumable.getConsumableName() + " 全部损耗，不更新库存");
+                        }
+                    }
                 }
             }
             

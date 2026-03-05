@@ -1,15 +1,8 @@
 package com.device.warehouse.entity;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "inventory_alert_config")
 public class InventoryAlertConfig {
@@ -49,5 +42,96 @@ public class InventoryAlertConfig {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // Default constructor
+    public InventoryAlertConfig() {}
+
+    // All args constructor
+    public InventoryAlertConfig(Long id, String deviceName, Integer minQuantity, 
+                              Integer maxQuantity, String remark, LocalDateTime createdAt, 
+                              LocalDateTime updatedAt, String createdBy, String updatedBy) {
+        this.id = id;
+        this.deviceName = deviceName;
+        this.minQuantity = minQuantity;
+        this.maxQuantity = maxQuantity;
+        this.remark = remark;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.createdBy = createdBy;
+        this.updatedBy = updatedBy;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
+    }
+
+    public Integer getMinQuantity() {
+        return minQuantity;
+    }
+
+    public void setMinQuantity(Integer minQuantity) {
+        this.minQuantity = minQuantity;
+    }
+
+    public Integer getMaxQuantity() {
+        return maxQuantity;
+    }
+
+    public void setMaxQuantity(Integer maxQuantity) {
+        this.maxQuantity = maxQuantity;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

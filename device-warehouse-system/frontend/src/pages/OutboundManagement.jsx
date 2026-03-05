@@ -556,13 +556,19 @@ function OutboundManagement() {
       
       console.log('响应数据:', data)
       
+      if (!response.ok) {
+        console.error('操作失败，错误信息:', data.message)
+        message.error(data.message || '操作失败')
+        return
+      }
+      
       if (data.success) {
         message.success(currentOrder ? '出库单更新成功' : '出库单创建成功')
         setModalVisible(false)
         form.resetFields()
         setItems([])
         setImages([])
-        setCurrentOrder(null) // 清空当前编辑的订单信息
+        setCurrentOrder(null)
         fetchOrders()
         fetchDevices()
       } else {

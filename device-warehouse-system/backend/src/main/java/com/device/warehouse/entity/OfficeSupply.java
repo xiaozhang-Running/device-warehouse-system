@@ -1,15 +1,8 @@
 package com.device.warehouse.entity;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "office_supply")
 public class OfficeSupply {
@@ -86,6 +79,9 @@ public class OfficeSupply {
     @Column(name = "updated_by", length = 50)
     private String updatedBy;
 
+    public OfficeSupply() {
+    }
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -113,5 +109,197 @@ public class OfficeSupply {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Integer getSeqNo() {
+        return seqNo;
+    }
+
+    public void setSeqNo(Integer seqNo) {
+        this.seqNo = seqNo;
+    }
+
+    public String getSupplyName() {
+        return supplyName;
+    }
+
+    public void setSupplyName(String supplyName) {
+        this.supplyName = supplyName;
+    }
+
+    public String getSupplyCode() {
+        return supplyCode;
+    }
+
+    public void setSupplyCode(String supplyCode) {
+        this.supplyCode = supplyCode;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public String getModelSpec() {
+        return modelSpec;
+    }
+
+    public void setModelSpec(String modelSpec) {
+        this.modelSpec = modelSpec;
+    }
+
+    public Integer getOriginalQuantity() {
+        return originalQuantity;
+    }
+
+    public void setOriginalQuantity(Integer originalQuantity) {
+        this.originalQuantity = originalQuantity;
+    }
+
+    public Integer getUsedQuantity() {
+        return usedQuantity;
+    }
+
+    public void setUsedQuantity(Integer usedQuantity) {
+        this.usedQuantity = usedQuantity;
+    }
+
+    public Integer getRemainingQuantity() {
+        return remainingQuantity;
+    }
+
+    public void setRemainingQuantity(Integer remainingQuantity) {
+        this.remainingQuantity = remainingQuantity;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public Integer getMinStock() {
+        return minStock;
+    }
+
+    public void setMinStock(Integer minStock) {
+        this.minStock = minStock;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getCompany() {
+        return company;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
+    }
+
+    public String getSupplier() {
+        return supplier;
+    }
+
+    public void setSupplier(String supplier) {
+        this.supplier = supplier;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

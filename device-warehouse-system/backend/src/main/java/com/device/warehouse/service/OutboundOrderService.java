@@ -3,6 +3,7 @@ package com.device.warehouse.service;
 import com.device.warehouse.entity.Accessory;
 import com.device.warehouse.entity.Consumable;
 import com.device.warehouse.entity.Device;
+import com.device.warehouse.entity.InboundOrder;
 import com.device.warehouse.entity.Material;
 import com.device.warehouse.entity.OutboundOrder;
 import com.device.warehouse.entity.OutboundOrderItem;
@@ -10,6 +11,7 @@ import com.device.warehouse.entity.User;
 import com.device.warehouse.repository.AccessoryRepository;
 import com.device.warehouse.repository.ConsumableRepository;
 import com.device.warehouse.repository.DeviceRepository;
+import com.device.warehouse.repository.InboundOrderRepository;
 import com.device.warehouse.repository.MaterialRepository;
 import com.device.warehouse.repository.OutboundOrderItemRepository;
 import com.device.warehouse.repository.OutboundOrderRepository;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -48,20 +51,67 @@ public class OutboundOrderService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private InboundOrderRepository inboundOrderRepository;
+
     public List<OutboundOrder> getAllOrders() {
         List<OutboundOrder> orders = outboundOrderRepository.findAll();
-        // 加载每个订单的明细
+        // 过滤掉已经有完成入库记录的出库单
+        List<OutboundOrder> filteredOrders = new ArrayList<>();
+        
         for (OutboundOrder order : orders) {
-            List<OutboundOrderItem> items = outboundOrderItemRepository.findByOrderId(order.getId());
-            order.setItems(items);
+            // 检查该出库单是否已经有完成的入库记录
+            List<InboundOrder> completedInboundOrders = inboundOrderRepository.findCompletedByRelatedOutboundId(order.getId());
+            if (completedInboundOrders.isEmpty()) {
+                // 加载订单的明细
+                List<OutboundOrderItem> items = outboundOrderItemRepository.findByOrderId(order.getId());
+                // 加载每个明细项的关联设备信息
+                for (OutboundOrderItem item : items) {
+                    if (item.getDevice() != null) {
+                        Device device = deviceRepository.findById(item.getDevice().getId()).orElse(null);
+                        item.setDevice(device);
+                    }
+                    if (item.getConsumable() != null) {
+                        Consumable consumable = consumableRepository.findById(item.getConsumable().getId()).orElse(null);
+                        item.setConsumable(consumable);
+                    }
+                    if (item.getAccessory() != null) {
+                        Accessory accessory = accessoryRepository.findById(item.getAccessory().getId()).orElse(null);
+                        item.setAccessory(accessory);
+                    }
+                }
+                order.setItems(items);
+                filteredOrders.add(order);
+            } else {
+                System.out.println("出库单 " + order.getOrderCode() + " 已经有完成的入库记录，将被过滤掉");
+            }
         }
-        return orders;
+        return filteredOrders;
+    }
+
+    public List<OutboundOrder> findByEventName(String eventName) {
+        return outboundOrderRepository.findByEventName(eventName);
     }
 
     public OutboundOrder getOrderById(Long id) {
         OutboundOrder order = outboundOrderRepository.findById(id).orElse(null);
         if (order != null) {
             List<OutboundOrderItem> items = outboundOrderItemRepository.findByOrderId(id);
+            // 加载每个明细项的关联设备信息
+            for (OutboundOrderItem item : items) {
+                if (item.getDevice() != null) {
+                    Device device = deviceRepository.findById(item.getDevice().getId()).orElse(null);
+                    item.setDevice(device);
+                }
+                if (item.getConsumable() != null) {
+                    Consumable consumable = consumableRepository.findById(item.getConsumable().getId()).orElse(null);
+                    item.setConsumable(consumable);
+                }
+                if (item.getAccessory() != null) {
+                    Accessory accessory = accessoryRepository.findById(item.getAccessory().getId()).orElse(null);
+                    item.setAccessory(accessory);
+                }
+            }
             order.setItems(items);
         }
         return order;
@@ -346,15 +396,21 @@ public class OutboundOrderService {
                 if ("device".equals(item.getItemType()) && item.getDevice() != null) {
                     Device device = item.getDevice();
                     device.setUsageStatus("使用中");
+                    // 设置赛事时间信息
+                    String eventTime = order.getEventDate();
+                    device.setEventTime(eventTime);
                     deviceRepository.save(device);
-                    System.out.println("专用设备 " + device.getDeviceName() + " 已出库，使用状态更新为: 使用中");
+                    System.out.println("专用设备 " + device.getDeviceName() + " 已出库，使用状态更新为: 使用中，赛事时间: " + eventTime);
                 }
                 // 处理通用设备出库 - 只更新使用状态
                 else if ("accessory".equals(item.getItemType()) && item.getAccessory() != null) {
                     Accessory accessory = item.getAccessory();
                     accessory.setUsageStatus("使用中");
+                    // 设置赛事时间信息
+                    String eventTime = order.getEventDate();
+                    accessory.setEventTime(eventTime);
                     accessoryRepository.save(accessory);
-                    System.out.println("通用设备 " + accessory.getAccessoryName() + " 已出库，使用状态更新为: 使用中");
+                    System.out.println("通用设备 " + accessory.getAccessoryName() + " 已出库，使用状态更新为: 使用中，赛事时间: " + eventTime);
                 }
                 // 处理耗材出库 - 扣减库存
                 else if ("consumable".equals(item.getItemType()) && item.getConsumable() != null) {
@@ -384,12 +440,13 @@ public class OutboundOrderService {
                     consumable.setRemainingQuantity(newRemaining);
                     consumable.setQuantity(newQuantity);
                     consumableRepository.save(consumable);
-                    System.out.println("耗材 " + consumable.getConsumableName() + " 出库 " + outboundQuantity + " 个，已使用: " + newUsed + "，剩余: " + newRemaining);
+                    System.out.println("耗材 " + consumable.getConsumableName() + " 已出库，已使用: " + newUsed + "，剩余: " + newRemaining);
                 }
                 // 处理物料出库 - 扣减库存
                 else if ("material".equals(item.getItemType()) && item.getMaterial() != null) {
                     Material material = item.getMaterial();
                     int outboundQuantity = item.getQuantity() != null ? item.getQuantity() : 1;
+                    
                     int currentQuantity = material.getQuantity() != null ? material.getQuantity().intValue() : 0;
                     int newQuantity = currentQuantity - outboundQuantity;
                     
@@ -399,13 +456,13 @@ public class OutboundOrderService {
                     
                     material.setQuantity(BigDecimal.valueOf(newQuantity));
                     materialRepository.save(material);
-                    System.out.println("物料 " + material.getMaterialName() + " 出库 " + outboundQuantity + " 个，剩余库存: " + newQuantity);
+                    System.out.println("物料 " + material.getMaterialName() + " 已出库，当前库存: " + newQuantity);
                 }
             }
             
-            return outboundOrderRepository.save(order);
+            outboundOrderRepository.save(order);
         }
-        return null;
+        return order;
     }
 
     @Transactional
@@ -414,22 +471,36 @@ public class OutboundOrderService {
         if (order != null && "PENDING".equals(order.getStatus())) {
             order.setStatus("CANCELLED");
             
-            // 恢复设备状态为"未使用"
             List<OutboundOrderItem> items = outboundOrderItemRepository.findByOrderId(id);
+            
+            // 恢复设备使用状态
             for (OutboundOrderItem item : items) {
-                // 恢复专用设备状态
                 if ("device".equals(item.getItemType()) && item.getDevice() != null) {
                     Device device = item.getDevice();
                     device.setUsageStatus("未使用");
                     deviceRepository.save(device);
-                    System.out.println("取消出库单：专用设备 " + device.getDeviceName() + " 状态恢复为: 未使用");
+                    System.out.println("取消出库单，恢复设备 " + device.getDeviceName() + " 状态为: 未使用");
                 }
-                // 恢复通用设备使用状态
-                else if ("accessory".equals(item.getItemType()) && item.getAccessory() != null) {
-                    Accessory accessory = item.getAccessory();
-                    accessory.setUsageStatus("未使用");
-                    accessoryRepository.save(accessory);
-                    System.out.println("取消出库单：通用设备 " + accessory.getAccessoryName() + " 状态恢复为: 未使用");
+            }
+            
+            outboundOrderRepository.save(order);
+        }
+        return order;
+    }
+
+    @Transactional
+    public void deleteOrder(Long id) {
+        OutboundOrder order = outboundOrderRepository.findById(id).orElse(null);
+        if (order != null) {
+            List<OutboundOrderItem> items = outboundOrderItemRepository.findByOrderId(id);
+            
+            // 恢复设备使用状态
+            for (OutboundOrderItem item : items) {
+                if ("device".equals(item.getItemType()) && item.getDevice() != null) {
+                    Device device = item.getDevice();
+                    device.setUsageStatus("未使用");
+                    deviceRepository.save(device);
+                    System.out.println("删除出库单，恢复设备 " + device.getDeviceName() + " 状态为: 未使用");
                 }
                 // 恢复耗材库存
                 else if ("consumable".equals(item.getItemType()) && item.getConsumable() != null) {
@@ -456,99 +527,28 @@ public class OutboundOrderService {
                     consumable.setRemainingQuantity(newRemaining);
                     consumable.setQuantity(newQuantity);
                     consumableRepository.save(consumable);
-                    System.out.println("取消出库单：耗材 " + consumable.getConsumableName() + " 库存恢复 " + outboundQuantity + " 个，已使用: " + newUsed + "，剩余: " + newRemaining);
+                    System.out.println("删除出库单，恢复耗材库存: " + consumable.getConsumableName() + " +" + outboundQuantity + "，已使用: " + newUsed + "，剩余: " + newRemaining);
                 }
                 // 恢复物料库存
                 else if ("material".equals(item.getItemType()) && item.getMaterial() != null) {
-                    Material material = item.getMaterial();
-                    int outboundQuantity = item.getQuantity() != null ? item.getQuantity() : 1;
-                    int currentQuantity = material.getQuantity() != null ? material.getQuantity().intValue() : 0;
-                    int newQuantity = currentQuantity + outboundQuantity;
-                    
-                    material.setQuantity(BigDecimal.valueOf(newQuantity));
-                    materialRepository.save(material);
-                    System.out.println("取消出库单：物料 " + material.getMaterialName() + " 库存恢复 " + outboundQuantity + " 个，当前库存: " + newQuantity);
+                    Material material = materialRepository.findById(item.getMaterial().getId()).orElse(null);
+                    if (material != null) {
+                        int outboundQuantity = item.getQuantity() != null ? item.getQuantity() : 1;
+                        int currentQuantity = material.getQuantity() != null ? material.getQuantity().intValue() : 0;
+                        int newQuantity = currentQuantity + outboundQuantity;
+                        
+                        material.setQuantity(BigDecimal.valueOf(newQuantity));
+                        materialRepository.save(material);
+                        System.out.println("删除出库单，恢复物料库存: " + material.getMaterialName() + " +" + outboundQuantity + "，当前库存: " + newQuantity);
+                    }
                 }
             }
             
-            return outboundOrderRepository.save(order);
+            // 删除明细
+            outboundOrderItemRepository.deleteAll(items);
+            // 删除订单
+            outboundOrderRepository.deleteById(id);
         }
-        return null;
-    }
-
-    @Transactional
-    public void deleteOrder(Long id) {
-        // 获取出库单明细
-        List<OutboundOrderItem> items = outboundOrderItemRepository.findByOrderId(id);
-        
-        // 恢复设备使用状态为"未使用"，恢复耗材库存
-        for (OutboundOrderItem item : items) {
-            // 恢复专用设备状态
-            if ("device".equals(item.getItemType()) && item.getDevice() != null && item.getDevice().getId() != null) {
-                Device device = deviceRepository.findById(item.getDevice().getId()).orElse(null);
-                if (device != null) {
-                    device.setUsageStatus("未使用");
-                    deviceRepository.save(device);
-                    System.out.println("删除出库单，恢复专用设备使用状态: " + device.getDeviceName() + " -> 未使用");
-                }
-            }
-            // 恢复通用设备使用状态
-            else if ("accessory".equals(item.getItemType()) && item.getAccessory() != null) {
-                Accessory accessory = accessoryRepository.findById(item.getAccessory().getId()).orElse(null);
-                if (accessory != null) {
-                    accessory.setUsageStatus("未使用");
-                    accessoryRepository.save(accessory);
-                    System.out.println("删除出库单，恢复通用设备使用状态: " + accessory.getAccessoryName() + " -> 未使用");
-                }
-            }
-            // 恢复耗材库存
-            else if ("consumable".equals(item.getItemType()) && item.getConsumable() != null) {
-                Consumable consumable = consumableRepository.findById(item.getConsumable().getId()).orElse(null);
-                if (consumable != null) {
-                    int outboundQuantity = item.getQuantity() != null ? item.getQuantity() : 1;
-                    
-                    // 获取当前各数量字段
-                    int currentUsed = consumable.getUsedQuantity() != null ? consumable.getUsedQuantity() : 0;
-                    int currentRemaining = consumable.getRemainingQuantity() != null ? consumable.getRemainingQuantity() : 0;
-                    int currentQuantity = consumable.getQuantity() != null ? consumable.getQuantity() : 0;
-                    
-                    // 计算新的数量
-                    int newUsed = currentUsed - outboundQuantity;
-                    int newRemaining = currentRemaining + outboundQuantity;
-                    int newQuantity = currentQuantity + outboundQuantity;
-                    
-                    // 确保不会变成负数
-                    if (newUsed < 0) {
-                        newUsed = 0;
-                    }
-                    
-                    // 更新所有数量字段
-                    consumable.setUsedQuantity(newUsed);
-                    consumable.setRemainingQuantity(newRemaining);
-                    consumable.setQuantity(newQuantity);
-                    consumableRepository.save(consumable);
-                    System.out.println("删除出库单，恢复耗材库存: " + consumable.getConsumableName() + " +" + outboundQuantity + "，已使用: " + newUsed + "，剩余: " + newRemaining);
-                }
-            }
-            // 恢复物料库存
-            else if ("material".equals(item.getItemType()) && item.getMaterial() != null) {
-                Material material = materialRepository.findById(item.getMaterial().getId()).orElse(null);
-                if (material != null) {
-                    int outboundQuantity = item.getQuantity() != null ? item.getQuantity() : 1;
-                    int currentQuantity = material.getQuantity() != null ? material.getQuantity().intValue() : 0;
-                    int newQuantity = currentQuantity + outboundQuantity;
-                    
-                    material.setQuantity(BigDecimal.valueOf(newQuantity));
-                    materialRepository.save(material);
-                    System.out.println("删除出库单，恢复物料库存: " + material.getMaterialName() + " +" + outboundQuantity + "，当前库存: " + newQuantity);
-                }
-            }
-        }
-        
-        // 删除明细
-        outboundOrderItemRepository.deleteAll(items);
-        // 删除订单
-        outboundOrderRepository.deleteById(id);
     }
 
     @Transactional
@@ -571,5 +571,72 @@ public class OutboundOrderService {
         outboundOrderItemRepository.deleteAll();
         // 删除所有订单
         outboundOrderRepository.deleteAll();
+    }
+
+    @Transactional
+    public void transferDevice(Long sourceOutboundId, Long targetOutboundId, Long deviceId, String itemType, String remark) {
+        System.out.println("开始流转设备: sourceOutboundId=" + sourceOutboundId + ", targetOutboundId=" + targetOutboundId + ", deviceId=" + deviceId + ", itemType=" + itemType);
+        
+        // 获取源出库单和目标出库单
+        OutboundOrder sourceOrder = outboundOrderRepository.findById(sourceOutboundId).orElse(null);
+        OutboundOrder targetOrder = outboundOrderRepository.findById(targetOutboundId).orElse(null);
+        
+        if (sourceOrder == null || targetOrder == null) {
+            throw new RuntimeException("源出库单或目标出库单不存在");
+        }
+        
+        // 查找源出库单中的设备明细
+        List<OutboundOrderItem> sourceItems = outboundOrderItemRepository.findByOrderId(sourceOutboundId);
+        OutboundOrderItem sourceItem = null;
+        
+        for (OutboundOrderItem item : sourceItems) {
+            if ("device".equals(itemType) && item.getDevice() != null && item.getDevice().getId().equals(deviceId)) {
+                sourceItem = item;
+                break;
+            } else if ("consumable".equals(itemType) && item.getConsumable() != null && item.getConsumable().getId().equals(deviceId)) {
+                sourceItem = item;
+                break;
+            } else if ("accessory".equals(itemType) && item.getAccessory() != null && item.getAccessory().getId().equals(deviceId)) {
+                sourceItem = item;
+                break;
+            }
+        }
+        
+        if (sourceItem == null) {
+            throw new RuntimeException("在源出库单中未找到指定的设备");
+        }
+        
+        // 创建新的出库单明细项到目标出库单
+        OutboundOrderItem targetItem = new OutboundOrderItem();
+        targetItem.setOrder(targetOrder);
+        targetItem.setItemType(itemType);
+        targetItem.setQuantity(sourceItem.getQuantity());
+        targetItem.setUnit(sourceItem.getUnit());
+        targetItem.setDeviceCondition(sourceItem.getDeviceCondition());
+        targetItem.setBrandModel(sourceItem.getBrandModel());
+        
+        // 设置流转备注
+        String originalRemark = sourceItem.getRemark() != null ? sourceItem.getRemark() : "";
+        String transferRemark = remark != null ? remark : "";
+        targetItem.setRemark(originalRemark.isEmpty() ? transferRemark : originalRemark + " | " + transferRemark);
+        
+        // 复制设备/耗材/通用设备引用
+        if ("device".equals(itemType)) {
+            targetItem.setDevice(sourceItem.getDevice());
+        } else if ("consumable".equals(itemType)) {
+            targetItem.setConsumable(sourceItem.getConsumable());
+        } else if ("accessory".equals(itemType)) {
+            targetItem.setAccessory(sourceItem.getAccessory());
+        }
+        
+        // 保存目标出库单明细
+        outboundOrderItemRepository.save(targetItem);
+        System.out.println("设备已流转到目标出库单: " + targetOrder.getOrderCode());
+        
+        // 不删除源出库单中的设备明细，保持出库记录的完整性
+        // 而是更新源出库单明细的状态为已流转
+        sourceItem.setRemark(originalRemark.isEmpty() ? transferRemark : originalRemark + " | " + transferRemark + " (已流转)");
+        outboundOrderItemRepository.save(sourceItem);
+        System.out.println("已标记源出库单设备明细为已流转: " + sourceOrder.getOrderCode());
     }
 }

@@ -1,9 +1,5 @@
 package com.device.warehouse.entity;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -14,9 +10,6 @@ import java.time.LocalDateTime;
  * @author Warehouse Management System
  * @version 1.0
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "device")
 public class Device {
@@ -69,6 +62,10 @@ public class Device {
     /** 使用状态（使用中、未使用） */
     @Column(name = "usage_status", length = 20)
     private String usageStatus;
+
+    /** 赛事时间信息（出库时设置，格式：YYYY-MM-DD 至 YYYY-MM-DD） */
+    @Column(name = "event_time", length = 100)
+    private String eventTime;
 
     /** 所属公司 */
     @Column(name = "company", length = 100)
@@ -132,5 +129,214 @@ public class Device {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // Default constructor
+    public Device() {}
+
+    // All args constructor
+    public Device(Long id, Integer seqNo, String deviceName, String deviceCode, String snCode, 
+                  String brand, String modelSpec, Integer quantity, String unit, String otherAccessories, 
+                  String status, String usageStatus, String company, String location, String remark, 
+                  String imageUrl, Integer imageCount, LocalDateTime createdAt, LocalDateTime updatedAt, 
+                  String createdBy, String updatedBy) {
+        this.id = id;
+        this.seqNo = seqNo;
+        this.deviceName = deviceName;
+        this.deviceCode = deviceCode;
+        this.snCode = snCode;
+        this.brand = brand;
+        this.modelSpec = modelSpec;
+        this.quantity = quantity;
+        this.unit = unit;
+        this.otherAccessories = otherAccessories;
+        this.status = status;
+        this.usageStatus = usageStatus;
+        this.company = company;
+        this.location = location;
+        this.remark = remark;
+        this.imageUrl = imageUrl;
+        this.imageCount = imageCount;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.createdBy = createdBy;
+        this.updatedBy = updatedBy;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Integer getSeqNo() {
+        return seqNo;
+    }
+
+    public void setSeqNo(Integer seqNo) {
+        this.seqNo = seqNo;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
+    }
+
+    public String getDeviceCode() {
+        return deviceCode;
+    }
+
+    public void setDeviceCode(String deviceCode) {
+        this.deviceCode = deviceCode;
+    }
+
+    public String getSnCode() {
+        return snCode;
+    }
+
+    public void setSnCode(String snCode) {
+        this.snCode = snCode;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public String getModelSpec() {
+        return modelSpec;
+    }
+
+    public void setModelSpec(String modelSpec) {
+        this.modelSpec = modelSpec;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public String getOtherAccessories() {
+        return otherAccessories;
+    }
+
+    public void setOtherAccessories(String otherAccessories) {
+        this.otherAccessories = otherAccessories;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getUsageStatus() {
+        return usageStatus;
+    }
+
+    public void setUsageStatus(String usageStatus) {
+        this.usageStatus = usageStatus;
+    }
+
+    public String getEventTime() {
+        return eventTime;
+    }
+
+    public void setEventTime(String eventTime) {
+        this.eventTime = eventTime;
+    }
+
+    public String getCompany() {
+        return company;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public Integer getImageCount() {
+        return imageCount;
+    }
+
+    public void setImageCount(Integer imageCount) {
+        this.imageCount = imageCount;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

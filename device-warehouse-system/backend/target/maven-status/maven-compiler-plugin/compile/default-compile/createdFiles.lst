@@ -1,6 +1,7 @@
 com\device\warehouse\controller\DashboardController.class
 com\device\warehouse\repository\CompanyRepository.class
 com\device\warehouse\entity\Consumable.class
+com\device\warehouse\entity\TestLombok.class
 com\device\warehouse\repository\OutboundOrderRepository.class
 com\device\warehouse\entity\Warehouse.class
 com\device\warehouse\controller\DeviceImageController.class

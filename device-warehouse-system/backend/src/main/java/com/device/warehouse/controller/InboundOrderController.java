@@ -48,6 +48,16 @@ public class InboundOrderController {
             order.setReceiver((String) request.get("receiver"));
             order.setReceiverPhone((String) request.get("receiverPhone"));
             
+            // 处理关联出库单ID
+            if (request.get("relatedOutboundId") != null) {
+                Object outboundId = request.get("relatedOutboundId");
+                if (outboundId instanceof Number) {
+                    order.setRelatedOutboundId(((Number) outboundId).longValue());
+                } else {
+                    order.setRelatedOutboundId(Long.parseLong(outboundId.toString()));
+                }
+            }
+            
             // 处理归还入库的设备ID列表
             @SuppressWarnings("unchecked")
             List<Object> deviceIdsRaw = (List<Object>) request.get("deviceIds");
@@ -63,19 +73,39 @@ public class InboundOrderController {
                     .toList();
             }
             
-            // 处理新采购入库的物品明细
+            // 处理前端传递的items中的设备ID
             @SuppressWarnings("unchecked")
-            Map<String, Object> inventoryList = (Map<String, Object>) request.get("inventoryList");
-            List<Map<String, Object>> items = null;
-            if (inventoryList != null) {
-                items = (List<Map<String, Object>>) inventoryList.get("items");
+            List<Map<String, Object>> itemsFromRequest = (List<Map<String, Object>>) request.get("items");
+            if (itemsFromRequest != null && !itemsFromRequest.isEmpty() && deviceIds == null) {
+                deviceIds = itemsFromRequest.stream()
+                    .map(item -> {
+                        Object deviceId = item.get("deviceId");
+                        if (deviceId instanceof Number) {
+                            return ((Number) deviceId).longValue();
+                        }
+                        return Long.parseLong(deviceId.toString());
+                    })
+                    .toList();
             }
             
+            // 处理新采购入库的物品明细
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) request.get("itemDetails");
+            
+            // 处理设备备注
+            @SuppressWarnings("unchecked")
+            Map<String, String> itemRemarks = (Map<String, String>) request.get("itemRemarks");
+            
+            // 处理设备状态
+            @SuppressWarnings("unchecked")
+            Map<String, String> itemStatuses = (Map<String, String>) request.get("itemStatuses");
+            
             System.out.println("创建入库单: " + order.getOrderCode() + ", 类型: " + order.getInboundType() + 
+                ", 关联出库单: " + order.getRelatedOutboundId() +
                 ", 归还设备数量: " + (deviceIds != null ? deviceIds.size() : 0) + 
                 ", 新采购物品数量: " + (items != null ? items.size() : 0));
             
-            InboundOrder createdOrder = inboundOrderService.createOrder(order, deviceIds, items);
+            InboundOrder createdOrder = inboundOrderService.createOrder(order, deviceIds, items, itemRemarks, itemStatuses);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

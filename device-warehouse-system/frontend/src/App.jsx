@@ -33,6 +33,7 @@ import MaterialInboundManagement from './pages/MaterialInboundManagement'
 import OutboundManagement from './pages/OutboundManagement'
 import MaterialOutboundManagement from './pages/MaterialOutboundManagement'
 import OutboundOrderPrint from './pages/OutboundOrderPrint'
+import InboundOrderPrint from './pages/InboundOrderPrint'
 import InventoryManagement from './pages/InventoryManagement'
 import LocationManagement from './pages/LocationManagement'
 import UserManagement from './pages/UserManagement'
@@ -157,12 +158,12 @@ function MainLayout() {
         label: '入库管理',
         children: [
           {
-            key: 'inbound',
-            label: '设备采购入库',
-          },
-          {
             key: 'project-inbound',
             label: '项目入库',
+          },
+          {
+            key: 'inbound',
+            label: '设备采购入库',
           },
           {
             key: 'material-inbound',
@@ -292,6 +293,11 @@ function MainLayout() {
             <Route path="outbound/print/:id" element={
               <ProtectedRoute requiredRole="操作员">
                 <OutboundOrderPrint />
+              </ProtectedRoute>
+            } />
+            <Route path="inbound/print/:id" element={
+              <ProtectedRoute requiredRole="操作员">
+                <InboundOrderPrint />
               </ProtectedRoute>
             } />
             <Route path="inventory" element={<InventoryManagement />} />

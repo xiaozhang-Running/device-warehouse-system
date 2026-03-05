@@ -273,7 +273,41 @@ public class InventoryService {
                 this::mergeSummaryDTO);
         }
 
-        return new ArrayList<>(summaryMap.values());
+        List<InventorySummaryDTO> result = new ArrayList<>(summaryMap.values());
+        
+        // 按类别排序：专用设备、通用设备、耗材
+        result.sort((a, b) -> {
+            int categoryOrderA = getCategoryOrder(a.getCategory());
+            int categoryOrderB = getCategoryOrder(b.getCategory());
+            
+            if (categoryOrderA != categoryOrderB) {
+                return categoryOrderA - categoryOrderB;
+            }
+            
+            // 同类别内按设备名称排序
+            return a.getDeviceName().compareTo(b.getDeviceName());
+        });
+        
+        return result;
+    }
+    
+    /**
+     * 获取类别排序顺序
+     * @param category 类别名称
+     * @return 排序顺序
+     */
+    private int getCategoryOrder(String category) {
+        if (category == null) return 3;
+        switch (category) {
+            case "专用设备":
+                return 1;
+            case "通用设备":
+                return 2;
+            case "耗材":
+                return 3;
+            default:
+                return 4;
+        }
     }
     
     /**

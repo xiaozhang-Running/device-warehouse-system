@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Button, Modal, Form, Input, message, Space, Popconfirm, InputNumber, Select } from 'antd'
+import { Card, Table, Button, Modal, Form, Input, message, Space, Popconfirm, InputNumber, Select, Tooltip } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ClearOutlined } from '@ant-design/icons'
 
 const { Option } = Select
@@ -277,7 +277,7 @@ const AccessoryManagement = () => {
       key: 'usageStatus',
       width: 80,
       align: 'center',
-      render: (status) => {
+      render: (status, record) => {
         const statusMap = {
           '未使用': { color: '#52c41a', text: '未使用' },
           '预留中': { color: '#1890ff', text: '预留中' },
@@ -285,6 +285,16 @@ const AccessoryManagement = () => {
           '维修中': { color: '#faad14', text: '维修中' }
         }
         const statusInfo = statusMap[status] || { color: '#999', text: status || '未使用' }
+        
+        // 如果使用中有赛事时间，显示 Tooltip
+        if (status === '使用中' && record.eventTime) {
+          return (
+            <Tooltip title={`赛事时间: ${record.eventTime}`} placement="top">
+              <span style={{ color: statusInfo.color, cursor: 'pointer' }}>{statusInfo.text}</span>
+            </Tooltip>
+          )
+        }
+        
         return <span style={{ color: statusInfo.color }}>{statusInfo.text}</span>
       }
     },
