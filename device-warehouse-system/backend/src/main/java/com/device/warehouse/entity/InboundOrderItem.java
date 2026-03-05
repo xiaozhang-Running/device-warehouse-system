@@ -78,6 +78,9 @@ public class InboundOrderItem {
     @Column(name = "item_detail", length = 1000)
     private String itemDetail;
 
+    @Column(name = "sn_code", length = 100)
+    private String snCode;
+
     // Default constructor
     public InboundOrderItem() {}
 
@@ -248,5 +251,13 @@ public class InboundOrderItem {
 
     public void setItemDetail(String itemDetail) {
         this.itemDetail = itemDetail;
+    }
+
+    public String getSnCode() {
+        return snCode;
+    }
+
+    public void setSnCode(String snCode) {
+        this.snCode = snCode;
     }
 }

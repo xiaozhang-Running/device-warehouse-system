@@ -1,121 +1,106 @@
 package com.device.warehouse.controller;
 
+import com.device.warehouse.dto.ApiResponse;
 import com.device.warehouse.entity.Device;
 import com.device.warehouse.service.DeviceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+/**
+ * 专用设备控制器
+ * 提供设备CRUD和查询接口
+ */
 @RestController
-@RequestMapping("/devices")
+@RequestMapping("/api/devices")
 @CrossOrigin(origins = "*")
 public class DeviceController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(DeviceController.class);
+    
     @Autowired
     private DeviceService deviceService;
 
+    /**
+     * 获取所有设备
+     */
     @GetMapping
-    public List<Device> getAllDevices(
+    public ResponseEntity<ApiResponse<List<Device>>> getAllDevices(
             @RequestParam(required = false) String deviceName,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String usageStatus) {
+        
+        List<Device> devices;
         if (deviceName != null || brand != null || status != null || usageStatus != null) {
-            return deviceService.getDevicesByFilters(deviceName, brand, status, usageStatus);
+            devices = deviceService.getDevicesByFilters(deviceName, brand, status, usageStatus);
+        } else {
+            devices = deviceService.getAllDevices();
         }
-        return deviceService.getAllDevices();
+        
+        return ResponseEntity.ok(ApiResponse.success(devices));
     }
 
+    /**
+     * 根据ID获取设备
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<Device> getDeviceById(@PathVariable Long id) {
-        Device device = deviceService.getDeviceById(id);
-        if (device != null) {
-            return ResponseEntity.ok(device);
-        }
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<ApiResponse<Device>> getDeviceById(@PathVariable Long id) {
+        Device device = deviceService.findById(id);
+        return ResponseEntity.ok(ApiResponse.success(device));
     }
 
+    /**
+     * 创建设备
+     */
     @PostMapping
-    public Device createDevice(@RequestBody Device device) {
-        return deviceService.createDevice(device);
+    public ResponseEntity<ApiResponse<Device>> createDevice(@RequestBody Device device) {
+        logger.info("创建设备: {}", device.getDeviceName());
+        Device savedDevice = deviceService.save(device);
+        return ResponseEntity.ok(ApiResponse.success("设备创建成功", savedDevice));
     }
 
+    /**
+     * 更新设备
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<Device> updateDevice(@PathVariable Long id, @RequestBody Device device) {
+    public ResponseEntity<ApiResponse<Device>> updateDevice(
+            @PathVariable Long id, 
+            @RequestBody Device device) {
+        logger.info("更新设备: id={}", id);
         Device updatedDevice = deviceService.updateDevice(id, device);
-        if (updatedDevice != null) {
-            return ResponseEntity.ok(updatedDevice);
-        }
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(ApiResponse.success("设备更新成功", updatedDevice));
     }
 
+    /**
+     * 删除设备
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDevice(@PathVariable Long id) {
-        deviceService.deleteDevice(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ApiResponse<Void>> deleteDevice(@PathVariable Long id) {
+        logger.info("删除设备: id={}", id);
+        deviceService.deleteById(id);
+        return ResponseEntity.ok(ApiResponse.success("设备删除成功", null));
     }
 
-    @DeleteMapping("/clear")
-    public ResponseEntity<?> clearAllDevices() {
-        try {
-            deviceService.deleteAllDevices();
-            return ResponseEntity.ok().body("{\"success\": true, \"message\": \"设备数据已清空\"}");
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("{\"success\": false, \"message\": \"清空失败: " + e.getMessage() + "\"}");
-        }
+    /**
+     * 根据状态获取设备
+     */
+    @GetMapping("/status/{status}")
+    public ResponseEntity<ApiResponse<List<Device>>> getDevicesByStatus(@PathVariable String status) {
+        List<Device> devices = deviceService.getDevicesByStatus(status);
+        return ResponseEntity.ok(ApiResponse.success(devices));
     }
 
-    @GetMapping("/empty-name")
-    public ResponseEntity<?> getDevicesWithEmptyName() {
-        try {
-            List<Device> devices = deviceService.getDevicesWithEmptyName();
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("count", devices.size());
-            response.put("devices", devices);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "查询失败: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
-        }
-    }
-
-    @DeleteMapping("/empty-name")
-    public ResponseEntity<?> deleteDevicesWithEmptyName() {
-        try {
-            int count = deviceService.deleteDevicesWithEmptyName();
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "成功删除 " + count + " 条设备名称为空的数据");
-            response.put("count", count);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "删除失败: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
-        }
-    }
-
-    @PutMapping("/reset-status")
-    public ResponseEntity<?> resetAllDevicesStatus() {
-        try {
-            int count = deviceService.resetAllDevicesToUnused();
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "成功将 " + count + " 台设备状态重置为未使用");
-            response.put("count", count);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "重置失败: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
-        }
+    /**
+     * 根据使用状态获取设备
+     */
+    @GetMapping("/usage-status/{usageStatus}")
+    public ResponseEntity<ApiResponse<List<Device>>> getDevicesByUsageStatus(@PathVariable String usageStatus) {
+        List<Device> devices = deviceService.getDevicesByUsageStatus(usageStatus);
+        return ResponseEntity.ok(ApiResponse.success(devices));
     }
 }

@@ -5,6 +5,7 @@ C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\OutboundOrder.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\InboundOrder.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\InventoryService.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\dto\ApiResponse.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\InventoryAlertConfig.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Consumable.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Company.java
@@ -20,12 +21,14 @@ C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\MaterialService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\InventoryController.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Accessory.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\exception\ResourceNotFoundException.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\dto\DashboardStatsDTO.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Inventory.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\InventoryAlertConfigRepository.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\AccessoryRepository.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\DashboardService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\AuthController.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\BaseService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Warehouse.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\service\AccessoryService.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\config\DataInitializer.java
@@ -41,6 +44,7 @@ C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\OutboundOrderItem.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\InboundOrderRepository.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\DeviceRepository.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\exception\BusinessException.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\CompanyRepository.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\entity\Location.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\ConsumableController.java
@@ -64,3 +68,4 @@ C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\repository\OfficeSupplyRepository.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\DeviceImageController.java
 C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\controller\InboundOrderController.java
+C:\Users\Zhen\Documents\trae_projects\DEVICE\device-warehouse-system\backend\src\main\java\com\device\warehouse\exception\GlobalExceptionHandler.java

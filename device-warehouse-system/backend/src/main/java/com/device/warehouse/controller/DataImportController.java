@@ -78,7 +78,7 @@ public class DataImportController {
                         if (fields.length > 11) device.setRemark(fields[11].trim().replace("\"", ""));
                         if (fields.length > 12) device.setImageUrl(fields[12].trim().replace("\"", ""));
                         
-                        deviceService.createDevice(device);
+                        deviceService.save(device);
                         successCount++;
                     }
                 } catch (Exception e) {

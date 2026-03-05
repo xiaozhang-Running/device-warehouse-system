@@ -5,6 +5,7 @@ com\device\warehouse\entity\TestLombok.class
 com\device\warehouse\repository\OutboundOrderRepository.class
 com\device\warehouse\entity\Warehouse.class
 com\device\warehouse\controller\DeviceImageController.class
+com\device\warehouse\exception\GlobalExceptionHandler.class
 com\device\warehouse\controller\InboundOrderController.class
 com\device\warehouse\repository\UserRepository.class
 com\device\warehouse\service\InventoryService.class
@@ -28,10 +29,13 @@ com\device\warehouse\service\UserService.class
 com\device\warehouse\service\OfficeSupplyService.class
 com\device\warehouse\repository\DeviceImageRepository.class
 com\device\warehouse\service\InboundOrderService.class
+com\device\warehouse\dto\ApiResponse.class
 com\device\warehouse\repository\InventoryAlertConfigRepository.class
+com\device\warehouse\exception\ResourceNotFoundException.class
 com\device\warehouse\entity\Device.class
 com\device\warehouse\controller\UserController.class
 com\device\warehouse\service\DeviceImageService.class
+com\device\warehouse\service\BaseService.class
 com\device\warehouse\controller\AccessoryController.class
 com\device\warehouse\config\DataInitializer.class
 com\device\warehouse\entity\InventoryAlertConfig.class
@@ -56,6 +60,7 @@ com\device\warehouse\repository\InboundOrderRepository.class
 com\device\warehouse\repository\InboundOrderItemRepository.class
 com\device\warehouse\entity\OfficeSupply.class
 com\device\warehouse\repository\OfficeSupplyRepository.class
+com\device\warehouse\exception\BusinessException.class
 com\device\warehouse\repository\ConsumableRepository.class
 com\device\warehouse\controller\OutboundOrderController.class
 com\device\warehouse\repository\InventoryRepository.class

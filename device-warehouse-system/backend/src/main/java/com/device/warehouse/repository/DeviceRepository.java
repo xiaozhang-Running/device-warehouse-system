@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 设备数据访问接口
@@ -16,6 +17,21 @@ import java.util.List;
  */
 @Repository
 public interface DeviceRepository extends JpaRepository<Device, Long> {
+    
+    /**
+     * 根据设备编码查找
+     */
+    Optional<Device> findByDeviceCode(String deviceCode);
+    
+    /**
+     * 根据状态查找设备
+     */
+    List<Device> findByStatus(String status);
+    
+    /**
+     * 根据使用状态查找设备
+     */
+    List<Device> findByUsageStatus(String usageStatus);
     
     /**
      * 根据条件筛选设备
