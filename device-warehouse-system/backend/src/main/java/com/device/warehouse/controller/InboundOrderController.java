@@ -47,6 +47,7 @@ public class InboundOrderController {
             order.setDeviceType((String) request.get("deviceType"));
             order.setReceiver((String) request.get("receiver"));
             order.setReceiverPhone((String) request.get("receiverPhone"));
+            order.setDeliverer((String) request.get("deliverer"));
             
             // 处理关联出库单ID
             if (request.get("relatedOutboundId") != null) {
@@ -80,6 +81,22 @@ public class InboundOrderController {
                 deviceIds = itemsFromRequest.stream()
                     .map(item -> {
                         Object deviceId = item.get("deviceId");
+                        if (deviceId instanceof Number) {
+                            return ((Number) deviceId).longValue();
+                        }
+                        return Long.parseLong(deviceId.toString());
+                    })
+                    .toList();
+            }
+            
+            // 处理前端传递的itemDetails字段
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> itemDetails = (List<Map<String, Object>>) request.get("itemDetails");
+            if (itemDetails != null && !itemDetails.isEmpty() && deviceIds == null) {
+                // 从itemDetails中提取deviceId
+                deviceIds = itemDetails.stream()
+                    .map(item -> {
+                        Object deviceId = item.get("id");
                         if (deviceId instanceof Number) {
                             return ((Number) deviceId).longValue();
                         }
@@ -145,6 +162,46 @@ public class InboundOrderController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "操作失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateOrder(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        try {
+            InboundOrder order = new InboundOrder();
+            order.setOrderCode((String) request.get("orderCode"));
+            order.setRemark((String) request.get("remark"));
+            order.setReceiver((String) request.get("receiver"));
+            order.setReceiverPhone((String) request.get("receiverPhone"));
+            order.setDeliverer((String) request.get("deliverer"));
+            
+            // 处理物品明细
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> itemDetails = (List<Map<String, Object>>) request.get("itemDetails");
+            
+            System.out.println("更新入库单: " + id + ", 单号: " + order.getOrderCode());
+            
+            InboundOrder updatedOrder = inboundOrderService.updateOrder(id, order, itemDetails);
+            
+            if (updatedOrder != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "入库单更新成功");
+                response.put("data", updatedOrder);
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "入库单不存在");
+                return ResponseEntity.status(404).body(response);
+            }
+        } catch (Exception e) {
+            System.out.println("更新入库单失败: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "更新失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }

@@ -194,7 +194,7 @@ const DeviceManagement = () => {
         setCurrentFormDeviceName('')
         setFormImages([])
         setPendingUploadFiles([])
-        fetchDevices()
+        fetchDevices(filters)
       } else {
         message.error('操作失败')
       }

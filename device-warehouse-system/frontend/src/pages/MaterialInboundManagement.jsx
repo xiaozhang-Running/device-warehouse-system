@@ -3,6 +3,80 @@ import { Card, Table, Button, Modal, Form, Input, Select, DatePicker, message, S
 import { PlusOutlined, DeleteOutlined, FileTextOutlined, EyeOutlined } from '@ant-design/icons'
 
 function MaterialInboundManagement() {
+  // 处理打印功能
+  const handlePrint = () => {
+    // 克隆内容，避免影响原页面
+    const content = document.querySelector('.inventory-list')
+    if (!content) return
+    
+    // 打开新窗口
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    
+    // 构建打印页面
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>原材料入库清单打印</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+          }
+          h2 {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          p {
+            margin: 5px 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+          }
+          th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+          .signature-area {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+          }
+          @media print {
+            body {
+              margin: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${content.innerHTML}
+      </body>
+      </html>
+    `)
+    
+    printWindow.document.close()
+    
+    // 等待内容加载完成后打印
+    printWindow.onload = () => {
+      printWindow.print()
+      // 打印完成后关闭窗口
+      printWindow.onafterprint = () => {
+        printWindow.close()
+      }
+    }
+  }
+
   const [inboundOrders, setInboundOrders] = useState([])
   const [materials, setMaterials] = useState([])
   const [warehouses, setWarehouses] = useState([])
@@ -689,7 +763,7 @@ function MaterialInboundManagement() {
         width={800}
         footer={[
           <Button key="close" onClick={() => setInventoryListVisible(false)}>关闭</Button>,
-          <Button key="print" type="primary" icon={<FileTextOutlined />} onClick={() => window.print()}>打印清单</Button>
+          <Button key="print" type="primary" icon={<FileTextOutlined />} onClick={handlePrint}>打印清单</Button>
         ]}
       >
         {currentInventoryList && (

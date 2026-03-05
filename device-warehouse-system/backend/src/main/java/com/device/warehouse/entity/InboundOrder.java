@@ -52,6 +52,9 @@ public class InboundOrder {
     @Column(name = "receiver_phone", length = 20)
     private String receiverPhone;
 
+    @Column(name = "deliverer", length = 50)
+    private String deliverer;
+
     @Column(name = "remark", length = 500)
     private String remark;
 
@@ -91,7 +94,7 @@ public class InboundOrder {
     public InboundOrder(Long id, String orderCode, String supplier, LocalDateTime orderDate, 
                        LocalDateTime expectedDate, LocalDateTime actualDate, Integer totalQuantity, 
                        BigDecimal totalAmount, String status, String operator, String inboundType, 
-                       String deviceType, String receiver, String receiverPhone, String remark, 
+                       String deviceType, String receiver, String receiverPhone, String deliverer, String remark, 
                        Long relatedOutboundId, LocalDateTime createdAt, LocalDateTime updatedAt, 
                        String createdBy, String updatedBy, List<InboundOrderItem> items) {
         this.id = id;
@@ -108,6 +111,7 @@ public class InboundOrder {
         this.deviceType = deviceType;
         this.receiver = receiver;
         this.receiverPhone = receiverPhone;
+        this.deliverer = deliverer;
         this.remark = remark;
         this.relatedOutboundId = relatedOutboundId;
         this.createdAt = createdAt;
@@ -228,6 +232,14 @@ public class InboundOrder {
 
     public void setReceiverPhone(String receiverPhone) {
         this.receiverPhone = receiverPhone;
+    }
+
+    public String getDeliverer() {
+        return deliverer;
+    }
+
+    public void setDeliverer(String deliverer) {
+        this.deliverer = deliverer;
     }
 
     public String getRemark() {

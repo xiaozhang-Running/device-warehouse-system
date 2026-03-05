@@ -208,6 +208,7 @@ function ProjectInboundManagement() {
         orderDate: values.orderDate?.format('YYYY-MM-DD') || new Date().toISOString().split('T')[0],
         inboundType: 'return',
         relatedOutboundId: selectedOutbound.id,
+        deliverer: values.deliverer,
         receiver: values.receiver,
         receiverPhone: values.receiverPhone,
         remark: values.remark,
@@ -806,11 +807,16 @@ function ProjectInboundManagement() {
               </Form.Item>
             </Col>
             <Col span={6}>
+              <Form.Item name="deliverer" label="交货人">
+                <Input placeholder="请输入交货人" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
               <Form.Item name="receiver" label="接收人">
                 <Input placeholder="请输入接收人" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={6}>
               <Form.Item name="receiverPhone" label="联系电话">
                 <Input placeholder="请输入接收人联系电话" />
               </Form.Item>
